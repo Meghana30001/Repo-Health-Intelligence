@@ -214,7 +214,7 @@ function buildHotspots(fileMetrics) {
     const level = risk > 80 ? 'critical' : risk > 60 ? 'high' : risk > 40 ? 'medium' : 'low';
     return { path: file, risk, churn: m.churn, complexity, level };
   });
-  return scored.filter(h => h.churn >= 2).sort((a, b) => b.risk - a.risk).slice(0, 25);
+  return scored.filter(h => h.churn >= 1).sort((a, b) => b.risk - a.risk).slice(0, 25);
 }
 
 /* ── Dependency scanning ───────────────────────────────────────── */

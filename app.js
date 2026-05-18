@@ -700,7 +700,8 @@ function onHotspots(ev) {
       const el = document.createElement('div');
       el.className = `hotspot-item ${item.level || 'medium'}`;
       el.style.animationDelay = `${i * 40}ms`;
-      el.innerHTML = `<div class="hs-path">${item.path}</div><div class="hs-risk">${item.risk}</div><div class="hs-detail">Churn: ${item.churn} · ${item.complexity}</div>`;
+      const filename = item.path.split('/').pop();
+      el.innerHTML = `<div class="hs-path" title="${item.path}">${filename}</div><div class="hs-risk">${item.risk}</div><div class="hs-detail"><span>Churn: ${item.churn}</span><span>${item.complexity}</span></div>`;
       el.addEventListener('click', () => showHotspotDetail(item));
       grid.appendChild(el);
     });
