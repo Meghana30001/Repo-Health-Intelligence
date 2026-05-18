@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Repo Health Intelligence — Software Observability Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════ NAV ═══════════════════════════════════ -->
+<nav class="navbar" id="navbar">
+  <div class="nav-inner">
+    <div class="nav-brand">
+      <span class="brand-icon">⬡</span>
+      <span class="brand-name">RepoHealth<span class="brand-accent">IQ</span></span>
+    </div>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#dashboard">Dashboard</a></li>
+      <li><a href="#metrics">Metrics</a></li>
+      <li><a href="#tech">Tech Stack</a></li>
+    </ul>
+    <a href="#dashboard" class="nav-cta">Analyze Repo →</a>
+    <button class="nav-menu-btn" onclick="toggleMenu()">☰</button>
+  </div>
+  <div class="nav-mobile" id="navMobile">
+    <a href="#features">Features</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#dashboard">Dashboard</a>
+    <a href="#metrics">Metrics</a>
+    <a href="#tech">Tech Stack</a>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════ HERO ══════════════════════════════════ -->
+<section class="hero" id="home">
+  <div class="hero-bg">
+    <div class="grid-overlay"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      AI-Powered Software Observability Platform
+    </div>
+    <h1 class="hero-title">
+      Understand How Your<br/>
+      <em>Codebase Evolves</em>
+    </h1>
+    <p class="hero-subtitle">
+      Repo Health Intelligence reconstructs the full architectural history of any GitHub repository — analyzing every commit, computing health scores, and surfacing risks before they become bugs.
+    </p>
+    <div class="hero-actions">
+      <a href="#dashboard" class="btn-primary">
+        <span>Launch Dashboard</span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a href="#architecture" class="btn-ghost">View Architecture</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-item">
+        <div class="stat-number" data-target="500">0</div>
+        <div class="stat-label">Commits Analyzed</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <div class="stat-number" data-target="12">0</div>
+        <div class="stat-label">Languages Supported</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <div class="stat-number" data-target="7">0</div>
+        <div class="stat-label">Health Dimensions</div>
+      </div>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <div class="terminal-card">
+      <div class="terminal-header">
+        <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+        <span class="terminal-title">repo-health-iq</span>
+      </div>
+      <div class="terminal-body" id="terminalBody">
+        <div class="term-line"><span class="term-prompt">$</span> rhi analyze tensorflow/tensorflow</div>
+        <div class="term-line dim">Cloning repository...</div>
+        <div class="term-line dim">Walking commit history... <span class="term-count" id="commitCount">0</span> commits</div>
+        <div class="term-line dim">Parsing ASTs with Tree-Sitter...</div>
+        <div class="term-line dim">Building Knowledge Graph...</div>
+        <div class="term-line success">✓ Health Score: <span class="score-val">74.2</span></div>
+        <div class="term-line warn">⚠ Hotspots detected: src/core/kernels/</div>
+        <div class="term-line info">→ Bus Factor: 3 modules at risk</div>
+        <div class="term-line dim">Generating LLM narrative...</div>
+        <div class="term-line success cursor-blink">✓ Report ready. Opening dashboard_</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ FEATURES ══════════════════════════════ -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag">Core Capabilities</div>
+      <h2 class="section-title">Every Dimension of Repository Health</h2>
+      <p class="section-sub">A complete observability platform for engineering organizations — combining static analysis, graph intelligence, and AI-driven explanation.</p>
+    </div>
+    <div class="features-grid">
+
+      <div class="feature-card feature-large">
+        <div class="feature-icon">⬡</div>
+        <h3>Knowledge Graph Engine</h3>
+        <p>Transforms source code into a living graph of relationships — files, functions, modules, and developers — capturing structural evolution across every commit.</p>
+        <div class="feature-tags">
+          <span>Neo4j</span><span>NetworkX</span><span>Graph Diff</span>
+        </div>
+        <div class="graph-mini" id="graphMini"></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>Time-Series Health Scoring</h3>
+        <p>Computes weighted health scores at every commit, revealing how software quality evolves — not just what it is today.</p>
+        <div class="feature-tags"><span>TimescaleDB</span><span>PostgreSQL</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🔥</div>
+        <h3>Hotspot Risk Map</h3>
+        <p>Identifies files that are both complex <em>and</em> frequently edited — the statistical predictors of future bugs (Adam Tornhill methodology).</p>
+        <div class="feature-tags"><span>Code Churn</span><span>Cyclomatic</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <h3>LLM Engineering Analyst</h3>
+        <p>AI explains health drops in natural language — surfacing root causes like "increased coupling in auth module" without wasting tokens on parsing.</p>
+        <div class="feature-tags"><span>OpenAI</span><span>Minimal Usage</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🚌</div>
+        <h3>Bus Factor Detection</h3>
+        <p>Flags modules understood by only one contributor — a critical organizational risk that conventional tools miss entirely.</p>
+        <div class="feature-tags"><span>Contributor Analysis</span></div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🔮</div>
+        <h3>Pre-Merge Prediction</h3>
+        <p>Simulates the knowledge graph update for any PR diff and predicts the future health score before merging — AI for engineering decisions.</p>
+        <div class="feature-tags"><span>PR Simulation</span><span>Predictive</span></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ ARCHITECTURE ═══════════════════════════ -->
+<section class="architecture" id="architecture">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag">System Design</div>
+      <h2 class="section-title">Seven-Layer Architecture</h2>
+      <p class="section-sub">A production-grade pipeline from raw Git history to AI-powered engineering intelligence.</p>
+    </div>
+    <div class="arch-flow">
+      <div class="arch-step" data-step="1">
+        <div class="arch-step-num">01</div>
+        <div class="arch-step-body">
+          <div class="arch-icon">📁</div>
+          <h4>Data Ingestion Layer</h4>
+          <p>Clone repo → Walk commits → Extract metadata</p>
+          <div class="arch-tech">
+            <span>GitPython</span><span>PyDriller</span><span>libgit2</span>
+          </div>
+        </div>
+        <div class="arch-arrow">↓</div>
+      </div>
+
+      <div class="arch-step" data-step="2">
+        <div class="arch-step-num">02</div>
+        <div class="arch-step-body">
+          <div class="arch-icon">🌳</div>
+          <h4>Tree-Sitter Parser</h4>
+          <p>Source code → Abstract Syntax Trees (multi-language)</p>
+          <div class="arch-tech">
+            <span>Python</span><span>Java</span><span>Go</span><span>Rust</span><span>JS</span><span>C/C++</span>
+          </div>
+        </div>
+        <div class="arch-arrow">↓</div>
+      </div>
+
+      <div class="arch-step" data-step="3">
+        <div class="arch-step-num">03</div>
+        <div class="arch-step-body">
+          <div class="arch-icon">⬡</div>
+          <h4>Knowledge Graph Builder</h4>
+          <p>ASTs → Nodes (files, functions, classes) + Edges (calls, imports, inheritance)</p>
+          <div class="arch-tech">
+            <span>Neo4j</span><span>NetworkX</span><span>ArangoDB</span>
+          </div>
+        </div>
+        <div class="arch-arrow">↓</div>
+      </div>
+
+      <div class="arch-step" data-step="4">
+        <div class="arch-step-num">04</div>
+        <div class="arch-step-body">
+          <div class="arch-icon">⚙️</div>
+          <h4>Metric Engine</h4>
+          <p>Complexity Drift · Coverage · Hotspot Risk · Dependency Rot</p>
+          <div class="arch-tech">
+            <span>radon</span><span>lizard</span><span>Custom AST</span>
+          </div>
+        </div>
+        <div class="arch-arrow">↓</div>
+      </div>
+
+      <div class="arch-step" data-step="5">
+        <div class="arch-step-num">05</div>
+        <div class="arch-step-body">
+          <div class="arch-icon">📈</div>
+          <h4>Time-Series Intelligence</h4>
+          <p>Per-commit health history → architectural evolution analytics</p>
+          <div class="arch-tech">
+            <span>PostgreSQL</span><span>TimescaleDB</span>
+          </div>
+        </div>
+        <div class="arch-arrow">↓</div>
+      </div>
+
+      <div class="arch-step" data-step="6">
+        <div class="arch-step-num">06</div>
+        <div class="arch-step-body">
+          <div class="arch-icon">🖥️</div>
+          <h4>Interactive Dashboard</h4>
+          <p>Health Timeline · Hotspot Map · Graph Diff · PR Annotations</p>
+          <div class="arch-tech">
+            <span>React</span><span>D3.js</span><span>React Flow</span><span>Tailwind</span>
+          </div>
+        </div>
+        <div class="arch-arrow">↓</div>
+      </div>
+
+      <div class="arch-step" data-step="7">
+        <div class="arch-step-num">07</div>
+        <div class="arch-step-body">
+          <div class="arch-icon">🤖</div>
+          <h4>LLM Explanation Layer</h4>
+          <p>Metrics → Natural language root-cause analysis · Engineering narratives</p>
+          <div class="arch-tech">
+            <span>OpenAI API</span><span>Minimal Calls</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ DASHBOARD PREVIEW ═════════════════════ -->
+<section class="dashboard-section" id="dashboard">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag">Live Repository Analysis</div>
+      <h2 class="section-title">Repository Analysis Dashboard</h2>
+      <p class="section-sub">Enter any public GitHub repository to analyze real commit history, hotspots, and health metrics in real-time.</p>
+    </div>
+
+    <!-- Live Analysis Overlay -->
+    <div class="analysis-overlay" id="analysisOverlay">
+      <div class="overlay-inner">
+        <div class="overlay-spinner"></div>
+        <div class="overlay-label" id="liveProgressMsg">Initializing...</div>
+        <div class="overlay-bar-track"><div class="overlay-bar-fill" id="liveProgressBar"></div></div>
+      </div>
+    </div>
+
+    <!-- Repo Input Bar -->
+    <div class="repo-input-bar">
+      <div class="input-icon" id="wsStatusDot" title="Backend status">⬡</div>
+      <input type="text" id="repoInput" placeholder="owner/repo or full GitHub URL" value="facebook/react"/>
+      <select id="depthSelect" class="depth-select" title="Commit depth">
+        <option value="50">Quick (50)</option>
+        <option value="200" selected>Standard (200)</option>
+        <option value="500">Deep (500)</option>
+      </select>
+      <button class="analyze-btn" onclick="runAnalysis()">
+        <span id="analyzeBtnText">Analyze Repository</span>
+      </button>
+    </div>
+    <!-- Token row -->
+    <div class="token-row">
+      <span class="token-label">🔑 GitHub Token</span>
+      <input type="password" id="githubToken" placeholder="ghp_... (optional — for private repos &amp; faster API)" class="token-input"/>
+      <span class="token-hint">Private repos need a token with <code>repo</code> scope</span>
+    </div>
+
+    <!-- Dashboard Tabs -->
+    <div class="dash-tabs">
+      <button class="dash-tab active" onclick="switchTab('timeline', this)">Health Timeline</button>
+      <button class="dash-tab" id="tabBtnHotspot" onclick="switchTab('hotspot', this)">Hotspot Map</button>
+      <button class="dash-tab" onclick="switchTab('graph', this)">Knowledge Graph</button>
+      <button class="dash-tab" onclick="switchTab('metrics', this)">Metric Breakdown</button>
+    </div>
+
+    <!-- Health Score Bar -->
+    <div class="health-overview">
+      <div class="health-score-card">
+        <div class="hs-label">Overall Health Score</div>
+        <div class="hs-value" id="healthScore">74.2</div>
+        <div class="hs-grade moderate" id="healthGrade">Moderate</div>
+        <div class="hs-bar"><div class="hs-fill" id="healthFill" style="width:74.2%"></div></div>
+      </div>
+      <div class="health-subscores" id="subscores">
+        <div class="subscore">
+          <div class="ss-label">Complexity Drift</div>
+          <div class="ss-bar"><div class="ss-fill" style="width:61%; background: #f59e0b"></div></div>
+          <div class="ss-val">61</div>
+        </div>
+        <div class="subscore">
+          <div class="ss-label">Test Coverage</div>
+          <div class="ss-bar"><div class="ss-fill" style="width:78%; background: #22c55e"></div></div>
+          <div class="ss-val">78</div>
+        </div>
+        <div class="subscore">
+          <div class="ss-label">Hotspot Risk</div>
+          <div class="ss-bar"><div class="ss-fill" style="width:55%; background: #ef4444"></div></div>
+          <div class="ss-val">55</div>
+        </div>
+        <div class="subscore">
+          <div class="ss-label">Dependency Rot</div>
+          <div class="ss-bar"><div class="ss-fill" style="width:82%; background: #22c55e"></div></div>
+          <div class="ss-val">82</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Panels -->
+    <div class="tab-panels">
+
+      <!-- TIMELINE -->
+      <div class="tab-panel active" id="tab-timeline">
+        <div class="panel-header">
+          <h3>Health Score Evolution</h3>
+          <span class="panel-meta">Past 12 months · 847 commits analyzed</span>
+        </div>
+        <canvas id="timelineChart" height="280"></canvas>
+        <div class="timeline-events" id="timelineEvents">
+          <div class="event-card event-drop">
+            <div class="ev-marker">▼</div>
+            <div class="ev-body">
+              <div class="ev-title">PR #4821 — Auth Module Refactor</div>
+              <div class="ev-desc">Health dropped 12%. Increased coupling in authentication service due to new OAuth2 dependency chain. Cyclomatic complexity ↑ 34%.</div>
+              <div class="ev-meta">Mar 14, 2024 · Author: @kvai</div>
+            </div>
+          </div>
+          <div class="event-card event-rise">
+            <div class="ev-marker">▲</div>
+            <div class="ev-body">
+              <div class="ev-title">PR #5103 — Test Suite Expansion</div>
+              <div class="ev-desc">Health recovered 8%. Coverage increased from 67% → 78% following kernel test additions.</div>
+              <div class="ev-meta">Apr 2, 2024 · Author: @tensorteam</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HOTSPOT MAP -->
+      <div class="tab-panel" id="tab-hotspot">
+        <div class="panel-header">
+          <h3>Hotspot Risk Map</h3>
+          <span class="panel-meta">Risk = Code Churn × Complexity × Bug History</span>
+        </div>
+        <div class="hotspot-grid" id="hotspotGrid"></div>
+        <div class="hotspot-legend">
+          <span class="leg-item leg-critical">● Critical Risk</span>
+          <span class="leg-item leg-high">● High Risk</span>
+          <span class="leg-item leg-med">● Medium Risk</span>
+          <span class="leg-item leg-low">● Low Risk</span>
+        </div>
+      </div>
+
+      <!-- KNOWLEDGE GRAPH -->
+      <div class="tab-panel" id="tab-graph">
+        <div class="panel-header">
+          <h3>Knowledge Graph — Commit Diff</h3>
+          <div class="graph-controls">
+            <button class="gc-btn active" onclick="setGraphMode('current', this)">Current</button>
+            <button class="gc-btn" onclick="setGraphMode('diff', this)">Diff View</button>
+          </div>
+        </div>
+        <svg id="knowledgeGraph" width="100%" height="400"></svg>
+        <div class="graph-diff-legend" id="graphDiffLegend" style="display:none">
+          <span class="gd-added">+ 5 new classes</span>
+          <span class="gd-removed">- 2 removed modules</span>
+          <span class="gd-changed">~ 14 new dependencies</span>
+        </div>
+      </div>
+
+      <!-- METRIC BREAKDOWN -->
+      <div class="tab-panel" id="tab-metrics">
+        <div class="panel-header">
+          <h3>Health Score Formula</h3>
+          <span class="panel-meta">Explainable AI — no black boxes</span>
+        </div>
+        <div class="formula-block">
+          <div class="formula-title">Health Score =</div>
+          <div class="formula-weights">
+            <div class="fw-row"><span class="fw-w">0.30</span><span class="fw-times">×</span><span class="fw-m">Complexity Drift</span><span class="fw-v score-amber">61</span></div>
+            <div class="fw-row"><span class="fw-w">0.25</span><span class="fw-times">×</span><span class="fw-m">Test Coverage</span><span class="fw-v score-green">78</span></div>
+            <div class="fw-row"><span class="fw-w">0.25</span><span class="fw-times">×</span><span class="fw-m">Hotspot Risk</span><span class="fw-v score-red">55</span></div>
+            <div class="fw-row"><span class="fw-w">0.20</span><span class="fw-times">×</span><span class="fw-m">Dependency Rot</span><span class="fw-v score-green">82</span></div>
+            <div class="fw-total"><span>= </span><span class="fw-result">74.2</span></div>
+          </div>
+        </div>
+        <div class="metrics-detail-grid">
+          <div class="md-card">
+            <div class="md-icon">🌀</div>
+            <div class="md-title">Complexity Drift</div>
+            <div class="md-body">Measures cyclomatic complexity, function length, and nesting depth changes commit-by-commit. Consistent increases signal tech debt accumulation.</div>
+            <div class="md-tools">radon · lizard · custom AST</div>
+          </div>
+          <div class="md-card">
+            <div class="md-icon">🧪</div>
+            <div class="md-title">Test Coverage</div>
+            <div class="md-body">Extracts coverage reports from CI artifacts and test folders. Higher coverage correlates with lower defect rates in production.</div>
+            <div class="md-tools">coverage.py · pytest · Jest</div>
+          </div>
+          <div class="md-card">
+            <div class="md-icon">🔥</div>
+            <div class="md-title">Hotspot Risk</div>
+            <div class="md-body">Adam Tornhill's methodology: Hotspot = Code Churn × Complexity. Frequently edited AND complex files are statistically bug-prone.</div>
+            <div class="md-tools">Git log analysis · AST metrics</div>
+          </div>
+          <div class="md-card">
+            <div class="md-icon">🔗</div>
+            <div class="md-title">Dependency Rot</div>
+            <div class="md-body">Scans package.json, requirements.txt, and pom.xml for outdated versions, deprecated libraries, and unused dependencies against live registries.</div>
+            <div class="md-tools">npm audit · pip-audit · deps.dev</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- LLM Explanation Panel -->
+    <div class="llm-panel">
+      <div class="llm-header">
+        <span class="llm-icon">🤖</span>
+        <span class="llm-title">AI Engineering Analyst</span>
+        <span class="llm-badge">Powered by LLM · Justified usage only</span>
+      </div>
+      <div class="llm-body" id="llmBody">
+        <p class="llm-text">
+          <strong>Analysis of tensorflow/tensorflow:</strong> The repository demonstrates moderate health at 74.2/100. The primary concern is hotspot risk in <code>src/core/kernels/</code> — this directory accounts for 31% of all commits but carries a cyclomatic complexity index of 2.4× the project average. The authentication module saw significant coupling increase in March (PR #4821), introducing a new OAuth2 dependency chain that was not accompanied by corresponding test coverage. Recommend prioritizing refactoring of the kernels module and expanding test coverage in auth-related code paths.
+        </p>
+      </div>
+      <button class="llm-refresh-btn" onclick="refreshLLM()">↻ Refresh Analysis</button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ BONUS FEATURES ════════════════════════ -->
+<section class="bonus-section" id="bonus">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag">Advanced Engineering</div>
+      <h2 class="section-title">Bonus Intelligence Features</h2>
+      <p class="section-sub">The capabilities that separate a tool from a platform.</p>
+    </div>
+    <div class="bonus-grid">
+
+      <div class="bonus-card">
+        <div class="bonus-visual">
+          <div class="bus-bars" id="busBars"></div>
+        </div>
+        <div class="bonus-content">
+          <h3>🚌 Bus Factor Detection</h3>
+          <p>Computes how many developers truly understand each module by analyzing commit authorship, frequency, and recency. A bus factor of 1 is a critical organizational risk.</p>
+          <div class="bus-alert">
+            <span class="alert-icon">⚠</span>
+            <span>3 modules have bus factor = 1</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bonus-card">
+        <div class="bonus-visual">
+          <div class="drift-chart" id="driftChart"></div>
+        </div>
+        <div class="bonus-content">
+          <h3>🏗️ Architectural Drift Detection</h3>
+          <p>Compares dependency graphs across time windows to detect increasing coupling and broken modular boundaries — catching when clean architecture slowly decays.</p>
+          <div class="drift-metric">
+            <span class="drift-label">Coupling Index</span>
+            <span class="drift-val rising">↑ 18% over 90 days</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bonus-card">
+        <div class="bonus-visual">
+          <div class="merge-sim" id="mergeSim">
+            <div class="ms-pr">PR #5,201</div>
+            <div class="ms-arrow">→</div>
+            <div class="ms-result">
+              <div class="ms-score-label">Predicted</div>
+              <div class="ms-score">71.4</div>
+              <div class="ms-change negative">▼ 2.8</div>
+            </div>
+          </div>
+        </div>
+        <div class="bonus-content">
+          <h3>🔮 Pre-Merge Health Prediction</h3>
+          <p>Simulates the knowledge graph update for any PR diff and predicts the future health score before merging — AI for engineering decisions, not just reporting.</p>
+          <div class="merge-cta">
+            <input class="pr-input" type="text" placeholder="Enter PR number or diff URL" />
+            <button class="predict-btn" onclick="simulatePR()">Predict</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ TECH STACK ════════════════════════════ -->
+<section class="tech-section" id="tech">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag">Engineering Stack</div>
+      <h2 class="section-title">Built on Production-Grade Technologies</h2>
+    </div>
+    <div class="tech-grid">
+      <div class="tech-col">
+        <div class="tc-header">Backend</div>
+        <div class="tech-items">
+          <div class="ti"><span class="ti-dot green"></span>Python (FastAPI)</div>
+          <div class="ti"><span class="ti-dot green"></span>Tree-Sitter</div>
+          <div class="ti"><span class="ti-dot green"></span>PyDriller / GitPython</div>
+          <div class="ti"><span class="ti-dot green"></span>NetworkX / Neo4j</div>
+        </div>
+      </div>
+      <div class="tech-col">
+        <div class="tc-header">Database</div>
+        <div class="tech-items">
+          <div class="ti"><span class="ti-dot blue"></span>PostgreSQL</div>
+          <div class="ti"><span class="ti-dot blue"></span>TimescaleDB</div>
+          <div class="ti"><span class="ti-dot blue"></span>Neo4j (Graph)</div>
+          <div class="ti"><span class="ti-dot blue"></span>Redis (Cache)</div>
+        </div>
+      </div>
+      <div class="tech-col">
+        <div class="tc-header">Frontend</div>
+        <div class="tech-items">
+          <div class="ti"><span class="ti-dot amber"></span>React</div>
+          <div class="ti"><span class="ti-dot amber"></span>Chart.js / D3.js</div>
+          <div class="ti"><span class="ti-dot amber"></span>React Flow</div>
+          <div class="ti"><span class="ti-dot amber"></span>Tailwind CSS</div>
+        </div>
+      </div>
+      <div class="tech-col">
+        <div class="tc-header">AI / Analysis</div>
+        <div class="tech-items">
+          <div class="ti"><span class="ti-dot purple"></span>OpenAI API</div>
+          <div class="ti"><span class="ti-dot purple"></span>radon / lizard</div>
+          <div class="ti"><span class="ti-dot purple"></span>Custom AST metrics</div>
+          <div class="ti"><span class="ti-dot purple"></span>Cytoscape.js</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Architecture Formula Card -->
+    <div class="formula-card">
+      <div class="fc-title">Health Score Formula (Explainable by Design)</div>
+      <div class="fc-formula">
+        <span class="fc-hs">Health Score</span>
+        <span class="fc-eq">=</span>
+        <span class="fc-term"><span class="fc-w">0.30</span> × Complexity</span>
+        <span class="fc-plus">+</span>
+        <span class="fc-term"><span class="fc-w">0.25</span> × Coverage</span>
+        <span class="fc-plus">+</span>
+        <span class="fc-term"><span class="fc-w">0.25</span> × Hotspot</span>
+        <span class="fc-plus">+</span>
+        <span class="fc-term"><span class="fc-w">0.20</span> × Dependency</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ CTA ═══════════════════════════════════ -->
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-inner">
+      <div class="cta-glow"></div>
+      <h2>Ready to Understand Your Repository's History?</h2>
+      <p>Repo Health Intelligence gives engineering organizations the observability they need to manage technical debt, predict bugs, and make confident architectural decisions.</p>
+      <div class="cta-actions">
+        <a href="#dashboard" class="btn-primary">Launch Demo</a>
+        <a href="https://github.com" target="_blank" class="btn-ghost-light">View on GitHub</a>
+      </div>
+      <div class="cta-compare">
+        <span>Combines capabilities of</span>
+        <span class="cc-brand">GitHub</span>
+        <span>+</span>
+        <span class="cc-brand">SonarQube</span>
+        <span>+</span>
+        <span class="cc-brand">GitLab Insights</span>
+        <span>into one unified platform</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ FOOTER ════════════════════════════════ -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <span class="brand-icon">⬡</span>
+        <span class="brand-name">RepoHealth<span class="brand-accent">IQ</span></span>
+        <p>AI-powered software observability for engineering organizations.</p>
+      </div>
+      <div class="footer-links">
+        <div class="fl-col">
+          <div class="fl-title">Platform</div>
+          <a href="#features">Features</a>
+          <a href="#architecture">Architecture</a>
+          <a href="#dashboard">Dashboard</a>
+        </div>
+        <div class="fl-col">
+          <div class="fl-title">Analysis</div>
+          <a href="#metrics">Health Scoring</a>
+          <a href="#bonus">Bus Factor</a>
+          <a href="#bonus">Drift Detection</a>
+        </div>
+        <div class="fl-col">
+          <div class="fl-title">Tech Stack</div>
+          <a href="#tech">Backend</a>
+          <a href="#tech">Database</a>
+          <a href="#tech">Frontend</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2024 Repo Health Intelligence. Built for engineering organizations.</span>
+      <span class="footer-mono">Health Score = 0.30·C + 0.25·T + 0.25·H + 0.20·D</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
