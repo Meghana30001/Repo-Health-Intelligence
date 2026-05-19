@@ -306,6 +306,13 @@
       <span class="token-hint">Used for Gemini 1.5 Flash AI analysis</span>
     </div>
 
+    <!-- Recent Analyses (populated from MongoDB via REST API) -->
+    <div class="recent-analyses" id="recentAnalyses" style="display:none;">
+      <span class="ra-label">Recent:</span>
+      <div class="ra-chips" id="raChips"></div>
+      <button class="ra-clear" onclick="clearRecentAnalyses()" title="Clear history">✕</button>
+    </div>
+
     <!-- Dashboard Tabs -->
     <div class="dash-tabs">
       <button class="dash-tab active" onclick="switchTab('timeline', this)">Health Timeline</button>

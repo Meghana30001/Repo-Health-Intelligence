@@ -969,4 +969,93 @@ canvas { width: 100% !important; max-height: 300px; }
 .tc-yes { color: var(--green); }
 .tc-no  { color: var(--red); }
 
+/* ── Drift chart falling state ───────────────────────────────── */
+.drift-val.falling { color: var(--green); }
+.drift-metric:has(.drift-val.falling) {
+  background: rgba(34,197,94,0.08);
+  border-color: rgba(34,197,94,0.2);
+}
 
+/* ══════════════════════════════════════════════════════════════════
+   RECENT ANALYSES PANEL
+   ══════════════════════════════════════════════════════════════════ */
+.recent-analyses {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+.ra-label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+
+.ra-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1;
+}
+
+.ra-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-bright);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-secondary);
+}
+.ra-chip:hover { border-color: var(--accent); color: var(--text-primary); transform: translateY(-1px); }
+
+.ra-slug { color: var(--text-primary); font-weight: 600; }
+.ra-score {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: var(--bg-elevated);
+}
+.ra-chip.ra-healthy .ra-score { color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+.ra-chip.ra-moderate .ra-score { color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+.ra-chip.ra-at-risk .ra-score { color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+
+.ra-lang {
+  color: var(--accent-2);
+  font-size: 0.68rem;
+  opacity: 0.7;
+}
+
+.ra-clear {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+.ra-clear:hover { color: var(--red); }
+
+/* ms-change positive state */
+.ms-change.positive { color: var(--green); }

@@ -4,18 +4,52 @@ const { exec } = require('child_process');
 const { promisify } = require('util');
 const https = require('https');
 const execAsync = promisify(exec);
+const { isReady } = require('./db');
+const Analysis = require('./models/Analysis');
 
 const TMP_DIR = path.join(__dirname, 'tmp');
 const CACHE_TTL_MS = 30 * 60 * 1000;
 if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR, { recursive: true });
 
-const analysisCache = new Map();
-function getCached(slug) {
-  const e = analysisCache.get(slug);
-  if (!e || Date.now() - e.ts > CACHE_TTL_MS) { analysisCache.delete(slug); return null; }
-  return e.result;
+// In-memory fallback cache (used when MongoDB is unavailable)
+const memCache = new Map();
+
+async function getCached(slug) {
+  // Try MongoDB first
+  if (isReady()) {
+    try {
+      const cutoff = new Date(Date.now() - CACHE_TTL_MS);
+      const doc = await Analysis.findOne({ slug, analyzedAt: { $gte: cutoff } })
+        .sort({ analyzedAt: -1 }).lean();
+      if (doc) { console.log(`[Cache] MongoDB hit for ${slug}`); return doc; }
+    } catch (err) {
+      console.warn('[Cache] MongoDB read error:', err.message);
+    }
+  }
+  // Fallback: in-memory
+  const e = memCache.get(slug);
+  if (e && Date.now() - e.ts < CACHE_TTL_MS) { console.log(`[Cache] Memory hit for ${slug}`); return e.result; }
+  memCache.delete(slug);
+  return null;
 }
-function setCache(slug, result) { analysisCache.set(slug, { result, ts: Date.now() }); }
+
+async function setCache(slug, result) {
+  // Persist to MongoDB
+  if (isReady()) {
+    try {
+      await Analysis.findOneAndUpdate(
+        { slug },
+        { ...result, slug, analyzedAt: new Date() },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      console.log(`[Cache] Saved to MongoDB: ${slug}`);
+    } catch (err) {
+      console.warn('[Cache] MongoDB write error:', err.message);
+    }
+  }
+  // Always keep in-memory copy too for speed
+  memCache.set(slug, { result, ts: Date.now() });
+}
 
 /* ── GitHub API helper ─────────────────────────────────────────── */
 function githubAPI(endpoint, token) {
@@ -59,7 +93,7 @@ async function analyzeRepo(repoInput, emit, options = {}) {
 
   try {
     // ── Cache check ──
-    const cached = getCached(slug);
+    const cached = await getCached(slug);
     if (cached) {
       emit({ type: 'progress', stage: 'cache', message: `✓ Loaded from cache instantly!`, pct: 5 });
       replayResult(cached, emit);
@@ -161,7 +195,7 @@ async function analyzeRepo(repoInput, emit, options = {}) {
 
     emit({ type: 'progress', stage: 'done', message: `✓ Analysis complete!`, pct: 100 });
     const result = { slug, commitCount: commits.length, hotspots, busFactor, timeline, graph, score, narrative, repoMeta, testInfo, deps };
-    setCache(slug, result);
+    await setCache(slug, result);
     // Also store unique authors count for frontend use
     const uniqueAuthors = new Set(commits.map(c => c.author).filter(Boolean)).size;
     emit({ type: 'authorCount', count: uniqueAuthors });

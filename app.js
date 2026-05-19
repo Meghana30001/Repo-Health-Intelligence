@@ -1109,3 +1109,58 @@ function onTestCoverage(ev) {
   `;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   20. RECENT ANALYSES — MongoDB REST API
+   ═══════════════════════════════════════════════════════════════════ */
+async function loadRecentAnalyses() {
+  try {
+    const res = await fetch('/api/analyses?limit=8');
+    if (!res.ok) return;
+    const { analyses, db } = await res.json();
+    if (!db || !analyses || analyses.length === 0) return;
+
+    const panel = $('#recentAnalyses');
+    const chips = $('#raChips');
+    if (!panel || !chips) return;
+
+    chips.innerHTML = '';
+    analyses.forEach(a => {
+      const score = a.score?.total ?? '—';
+      const grade = score >= 80 ? 'healthy' : score >= 60 ? 'moderate' : 'at-risk';
+      const lang  = a.repoMeta?.language || '';
+      const chip  = document.createElement('button');
+      chip.className = `ra-chip ra-${grade}`;
+      chip.title = `Score: ${score} · ${a.commitCount} commits · ${new Date(a.analyzedAt).toLocaleDateString()}`;
+      chip.innerHTML = `<span class="ra-slug">${a.slug}</span><span class="ra-score">${score}</span>${lang ? `<span class="ra-lang">${lang}</span>` : ''}`;
+      chip.addEventListener('click', () => {
+        const input = $('#repoInput');
+        if (input) { input.value = a.slug; input.focus(); }
+        // Scroll to dashboard
+        document.getElementById('dashboard')?.scrollIntoView({ behavior: 'smooth' });
+      });
+      chips.appendChild(chip);
+    });
+
+    panel.style.display = 'flex';
+  } catch (_) {
+    // Silently ignore if API unavailable (no MongoDB)
+  }
+}
+
+async function clearRecentAnalyses() {
+  const panel = $('#recentAnalyses');
+  if (panel) panel.style.display = 'none';
+  // Note: this only hides the panel locally; actual DB records remain
+}
+
+// Refresh recent panel after each successful analysis
+const _origOnDone = onDone;
+function onDone(ev) {
+  _origOnDone(ev);
+  setTimeout(loadRecentAnalyses, 1500); // refresh after save completes
+}
+
+// Load on page start
+document.addEventListener('DOMContentLoaded', loadRecentAnalyses);
+// Also try immediately in case DOMContentLoaded already fired
+loadRecentAnalyses();
