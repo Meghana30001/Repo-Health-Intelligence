@@ -37,17 +37,21 @@ function githubAPI(endpoint, token) {
 async function analyzeRepo(repoInput, emit, options = {}) {
   const { token = '', depth = 200, geminiKey = process.env.GEMINI_API_KEY || '' } = options;
 
-  let slug = repoInput.trim()
-    .replace(/^https?:\/\/github\.com\//, '')
-    .replace(/\.git$/, '')
-    .replace(/\/+$/, '')
-    .replace(/[^a-zA-Z0-9_\-\/]/g, '');
-
+  let slug = repoInput.trim();
+  try {
+    if (slug.startsWith('http')) {
+      slug = new URL(slug).pathname.substring(1);
+    }
+  } catch(e) {}
+  slug = slug.replace(/\.git$/, '').replace(/\/+$/, '');
+  
   const parts = slug.split('/');
   if (parts.length < 2 || !parts[0] || !parts[1]) {
     emit({ type: 'error', message: 'Invalid format. Use owner/repo (e.g. facebook/react)' });
     return;
   }
+  
+  slug = `${parts[0]}/${parts[1]}`.replace(/[^a-zA-Z0-9_\-\/]/g, '');
 
   const authPrefix = token ? `${token}@` : '';
   const repoUrl = `https://${authPrefix}github.com/${slug}.git`;

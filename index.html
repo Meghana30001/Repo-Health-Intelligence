@@ -124,35 +124,35 @@
       </div>
 
       <div class="feature-card">
-        <div class="feature-icon">📊</div>
+        <div class="feature-icon">▤</div>
         <h3>Time-Series Health Scoring</h3>
         <p>Computes weighted health scores at every commit, revealing how software quality evolves — not just what it is today.</p>
         <div class="feature-tags"><span>TimescaleDB</span><span>PostgreSQL</span></div>
       </div>
 
       <div class="feature-card">
-        <div class="feature-icon">🔥</div>
+        <div class="feature-icon">⚡</div>
         <h3>Hotspot Risk Map</h3>
         <p>Identifies files that are both complex <em>and</em> frequently edited — the statistical predictors of future bugs (Adam Tornhill methodology).</p>
         <div class="feature-tags"><span>Code Churn</span><span>Cyclomatic</span></div>
       </div>
 
       <div class="feature-card">
-        <div class="feature-icon">🤖</div>
+        <div class="feature-icon">&lt;/&gt;</div>
         <h3>LLM Engineering Analyst</h3>
         <p>AI explains health drops in natural language — surfacing root causes like "increased coupling in auth module" without wasting tokens on parsing.</p>
         <div class="feature-tags"><span>OpenAI</span><span>Minimal Usage</span></div>
       </div>
 
       <div class="feature-card">
-        <div class="feature-icon">🚌</div>
+        <div class="feature-icon">⚲</div>
         <h3>Bus Factor Detection</h3>
         <p>Flags modules understood by only one contributor — a critical organizational risk that conventional tools miss entirely.</p>
         <div class="feature-tags"><span>Contributor Analysis</span></div>
       </div>
 
       <div class="feature-card">
-        <div class="feature-icon">🔮</div>
+        <div class="feature-icon">⎇</div>
         <h3>Pre-Merge Prediction</h3>
         <p>Simulates the knowledge graph update for any PR diff and predicts the future health score before merging — AI for engineering decisions.</p>
         <div class="feature-tags"><span>PR Simulation</span><span>Predictive</span></div>
@@ -174,7 +174,7 @@
       <div class="arch-step" data-step="1">
         <div class="arch-step-num">01</div>
         <div class="arch-step-body">
-          <div class="arch-icon">📁</div>
+          <div class="arch-icon">[ ]</div>
           <h4>Data Ingestion Layer</h4>
           <p>Clone repo → Walk commits → Extract metadata</p>
           <div class="arch-tech">
@@ -187,7 +187,7 @@
       <div class="arch-step" data-step="2">
         <div class="arch-step-num">02</div>
         <div class="arch-step-body">
-          <div class="arch-icon">🌳</div>
+          <div class="arch-icon">↳</div>
           <h4>Tree-Sitter Parser</h4>
           <p>Source code → Abstract Syntax Trees (multi-language)</p>
           <div class="arch-tech">
@@ -213,7 +213,7 @@
       <div class="arch-step" data-step="4">
         <div class="arch-step-num">04</div>
         <div class="arch-step-body">
-          <div class="arch-icon">⚙️</div>
+          <div class="arch-icon">⚙</div>
           <h4>Metric Engine</h4>
           <p>Complexity Drift · Coverage · Hotspot Risk · Dependency Rot</p>
           <div class="arch-tech">
@@ -226,7 +226,7 @@
       <div class="arch-step" data-step="5">
         <div class="arch-step-num">05</div>
         <div class="arch-step-body">
-          <div class="arch-icon">📈</div>
+          <div class="arch-icon">▤</div>
           <h4>Time-Series Intelligence</h4>
           <p>Per-commit health history → architectural evolution analytics</p>
           <div class="arch-tech">
@@ -239,7 +239,7 @@
       <div class="arch-step" data-step="6">
         <div class="arch-step-num">06</div>
         <div class="arch-step-body">
-          <div class="arch-icon">🖥️</div>
+          <div class="arch-icon">&lt;/&gt;</div>
           <h4>Interactive Dashboard</h4>
           <p>Health Timeline · Hotspot Map · Graph Diff · PR Annotations</p>
           <div class="arch-tech">
@@ -252,7 +252,7 @@
       <div class="arch-step" data-step="7">
         <div class="arch-step-num">07</div>
         <div class="arch-step-body">
-          <div class="arch-icon">🤖</div>
+          <div class="arch-icon">λ</div>
           <h4>LLM Explanation Layer</h4>
           <p>Metrics → Natural language root-cause analysis · Engineering narratives</p>
           <div class="arch-tech">
@@ -296,12 +296,12 @@
       </button>
     </div>
     <div class="token-row">
-      <span class="token-label">🔑 GitHub Token</span>
+      <span class="token-label">► GitHub Token</span>
       <input type="password" id="githubToken" placeholder="ghp_... (optional — for private repos &amp; faster API)" class="token-input"/>
       <span class="token-hint">Private repos need a token with <code>repo</code> scope</span>
     </div>
     <div class="token-row" style="margin-top: 8px;">
-      <span class="token-label">✨ Gemini API Key</span>
+      <span class="token-label">λ Gemini API Key</span>
       <input type="password" id="geminiToken" placeholder="AI Studio Key (optional — for LLM narrative)" class="token-input"/>
       <span class="token-hint">Used for Gemini 1.5 Flash AI analysis</span>
     </div>
@@ -426,25 +426,25 @@
         </div>
         <div class="metrics-detail-grid">
           <div class="md-card">
-            <div class="md-icon">🌀</div>
+            <div class="md-icon">∿</div>
             <div class="md-title">Complexity Drift</div>
             <div class="md-body">Measures cyclomatic complexity, function length, and nesting depth changes commit-by-commit. Consistent increases signal tech debt accumulation.</div>
             <div class="md-tools">radon · lizard · custom AST</div>
           </div>
           <div class="md-card">
-            <div class="md-icon">🧪</div>
+            <div class="md-icon">✓</div>
             <div class="md-title">Test Coverage</div>
             <div class="md-body">Extracts coverage reports from CI artifacts and test folders. Higher coverage correlates with lower defect rates in production.</div>
             <div class="md-tools">coverage.py · pytest · Jest</div>
           </div>
           <div class="md-card">
-            <div class="md-icon">🔥</div>
+            <div class="md-icon">⚡</div>
             <div class="md-title">Hotspot Risk</div>
             <div class="md-body">Adam Tornhill's methodology: Hotspot = Code Churn × Complexity. Frequently edited AND complex files are statistically bug-prone.</div>
             <div class="md-tools">Git log analysis · AST metrics</div>
           </div>
           <div class="md-card">
-            <div class="md-icon">🔗</div>
+            <div class="md-icon">∞</div>
             <div class="md-title">Dependency Rot</div>
             <div class="md-body">Scans package.json, requirements.txt, and pom.xml for outdated versions, deprecated libraries, and unused dependencies against live registries.</div>
             <div class="md-tools">npm audit · pip-audit · deps.dev</div>
@@ -457,7 +457,7 @@
     <!-- LLM Explanation Panel -->
     <div class="llm-panel">
       <div class="llm-header">
-        <span class="llm-icon">🤖</span>
+        <span class="llm-icon">λ</span>
         <span class="llm-title">AI Engineering Analyst</span>
         <span class="llm-badge">Powered by LLM · Justified usage only</span>
       </div>
@@ -486,7 +486,7 @@
           <div class="bus-bars" id="busBars"></div>
         </div>
         <div class="bonus-content">
-          <h3>🚌 Bus Factor Detection</h3>
+          <h3>⚲ Bus Factor Detection</h3>
           <p>Computes how many developers truly understand each module by analyzing commit authorship, frequency, and recency. A bus factor of 1 is a critical organizational risk.</p>
           <div class="bus-alert">
             <span class="alert-icon">⚠</span>
@@ -500,7 +500,7 @@
           <div class="drift-chart" id="driftChart"></div>
         </div>
         <div class="bonus-content">
-          <h3>🏗️ Architectural Drift Detection</h3>
+          <h3>⛓️ Architectural Drift Detection</h3>
           <p>Compares dependency graphs across time windows to detect increasing coupling and broken modular boundaries — catching when clean architecture slowly decays.</p>
           <div class="drift-metric">
             <span class="drift-label">Coupling Index</span>
@@ -522,7 +522,7 @@
           </div>
         </div>
         <div class="bonus-content">
-          <h3>🔮 Pre-Merge Health Prediction</h3>
+          <h3>⎇ Pre-Merge Health Prediction</h3>
           <p>Simulates the knowledge graph update for any PR diff and predicts the future health score before merging — AI for engineering decisions, not just reporting.</p>
           <div class="merge-cta">
             <input class="pr-input" type="text" placeholder="Enter PR number or diff URL" />
