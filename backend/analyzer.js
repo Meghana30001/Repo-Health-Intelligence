@@ -38,8 +38,9 @@ async function analyzeRepo(repoInput, emit, options = {}) {
   const { token = '', depth = 200 } = options;
 
   let slug = repoInput.trim()
-    .replace('https://github.com/', '')
+    .replace(/^https?:\/\/github\.com\//, '')
     .replace(/\.git$/, '')
+    .replace(/\/+$/, '')
     .replace(/[^a-zA-Z0-9_\-\/]/g, '');
 
   const parts = slug.split('/');
