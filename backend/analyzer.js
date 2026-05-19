@@ -139,6 +139,10 @@ async function analyzeRepo(repoInput, emit, options = {}) {
     emit({ type: 'progress', stage: 'timeline', message: `Building health timeline...`, pct: 75 });
     const timeline = buildTimeline(commits, fileMetrics);
     emit({ type: 'timeline', ...timeline });
+    // Emit real timeline events (notable drops/rises)
+    if (timeline.events && timeline.events.length > 0) {
+      emit({ type: 'timelineEvents', events: timeline.events });
+    }
 
     // ── Stage 10: Graph ──
     emit({ type: 'progress', stage: 'graph', message: `Building knowledge graph...`, pct: 82 });
@@ -158,6 +162,9 @@ async function analyzeRepo(repoInput, emit, options = {}) {
     emit({ type: 'progress', stage: 'done', message: `✓ Analysis complete!`, pct: 100 });
     const result = { slug, commitCount: commits.length, hotspots, busFactor, timeline, graph, score, narrative, repoMeta, testInfo, deps };
     setCache(slug, result);
+    // Also store unique authors count for frontend use
+    const uniqueAuthors = new Set(commits.map(c => c.author).filter(Boolean)).size;
+    emit({ type: 'authorCount', count: uniqueAuthors });
     emit({ type: 'done', repo: slug, commitCount: commits.length, duration: Date.now() });
 
   } catch (err) {
@@ -270,9 +277,23 @@ async function scanDependencies(repoDir) {
 
 /* ── Test detection ────────────────────────────────────────────── */
 function detectTests(repoDir, fileMetrics) {
-  const testPatterns = [/\.test\.[jt]sx?$/, /\.spec\.[jt]sx?$/, /_test\.go$/, /test_.*\.py$/, /_spec\.rb$/];
-  const testDirs = ['test', 'tests', '__tests__', 'spec', 'specs', 'e2e', 'integration'];
+  const testPatterns = [/\.test\.[jt]sx?$/, /\.spec\.[jt]sx?$/, /_test\.go$/, /test_.*\.py$/, /_spec\.rb$/, /Test\.java$/, /Tests\.java$/];
+  const testDirs = ['test', 'tests', '__tests__', 'spec', 'specs', 'e2e', 'integration', 'cypress', 'playwright'];
+  // CI config files are a strong signal that tests exist and run
+  const ciSignals = [
+    '.github/workflows', '.travis.yml', 'circle.yml', '.circleci',
+    'Makefile', 'tox.ini', 'jest.config.js', 'jest.config.ts',
+    'vitest.config.ts', 'vitest.config.js', 'pytest.ini', 'setup.cfg',
+    '.mocharc.js', '.mocharc.yml', 'karma.conf.js',
+  ];
   let testFiles = 0, sourceFiles = 0;
+  let ciBonus = 0;
+
+  // Check for CI/test-config signals in repo root
+  for (const sig of ciSignals) {
+    const sigPath = require('path').join(repoDir, sig);
+    if (require('fs').existsSync(sigPath)) { ciBonus += 8; break; }
+  }
 
   const allFiles = Object.keys(fileMetrics);
   for (const f of allFiles) {
@@ -280,8 +301,11 @@ function detectTests(repoDir, fileMetrics) {
     if (isTest) testFiles++; else sourceFiles++;
   }
   const ratio = sourceFiles > 0 ? testFiles / sourceFiles : 0;
-  const coverage = Math.min(95, Math.round(ratio * 120));
-  return { testFiles, sourceFiles, ratio: Math.round(ratio * 100), coverage, hasTests: testFiles > 0 };
+  // More realistic coverage estimate: ratio*150 (most repos have partial coverage)
+  // plus CI bonus capped at 95
+  const rawCoverage = Math.round(ratio * 150) + ciBonus;
+  const coverage = Math.max(0, Math.min(95, rawCoverage));
+  return { testFiles, sourceFiles, ratio: Math.round(ratio * 100), coverage, hasTests: testFiles > 0, hasCI: ciBonus > 0 };
 }
 
 /* ── Bus factor ────────────────────────────────────────────────── */
@@ -302,7 +326,7 @@ function buildTimeline(commits, fileMetrics) {
   const now = new Date();
   const months = Array.from({ length: 12 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
-    return { label: d.toLocaleString('default', { month: 'short' }), year: d.getFullYear(), month: d.getMonth(), commits: [] };
+    return { label: d.toLocaleString('default', { month: 'short', year: '2-digit' }), year: d.getFullYear(), month: d.getMonth(), commits: [] };
   });
   for (const c of commits) {
     const b = months.find(m => m.year === c.date.getFullYear() && m.month === c.date.getMonth());
@@ -311,21 +335,67 @@ function buildTimeline(commits, fileMetrics) {
   const entries = Object.entries(fileMetrics);
   const hotRatio = entries.length ? entries.filter(([, m]) => m.churn > 3).length / entries.length : 0.2;
   const busRisk = entries.length ? entries.filter(([, m]) => m.authorCount === 1).length / entries.length : 0.2;
-  let bH = Math.max(45, Math.round(85 - hotRatio * 40 - busRisk * 20));
-  let bC = Math.min(90, Math.round(40 + hotRatio * 30));
-  let bCov = Math.max(30, Math.round(70 - busRisk * 25));
+
+  // Deterministic base scores derived from actual metrics (no random noise)
+  const baseH   = Math.max(45, Math.min(90, Math.round(85 - hotRatio * 40 - busRisk * 20)));
+  const baseC   = Math.max(20, Math.min(90, Math.round(40 + hotRatio * 30)));
+  const baseCov = Math.max(20, Math.min(85, Math.round(70 - busRisk * 25)));
+
+  // Compute avg monthly commits for normalisation
+  const commitCounts = months.map(m => m.commits.length);
+  const maxMonthly = Math.max(...commitCounts, 1);
+  const avgMonthly = commitCounts.reduce((a, b) => a + b, 0) / 12;
+
   const health = [], complexity = [], coverage = [];
+  let runH = baseH, runC = baseC, runCov = baseCov;
+
   for (const m of months) {
-    const impact = m.commits.length > 20 ? -2 : m.commits.length < 3 ? 1 : 0;
-    const n = (Math.random() - 0.5) * 5;
-    bH = Math.max(40, Math.min(99, bH + impact + n));
-    bC = Math.max(20, Math.min(95, bC + (m.commits.length > 15 ? 1.5 : 0) + n * 0.4));
-    bCov = Math.max(20, Math.min(95, bCov + (m.commits.length > 20 ? -1 : 0.5) + n * 0.3));
-    health.push(Math.round(bH));
-    complexity.push(Math.round(bC));
-    coverage.push(Math.round(bCov));
+    const cnt = m.commits.length;
+    // High-activity months → slightly more complexity/churn, potential health dip
+    const activityRatio = cnt / (avgMonthly || 1);
+    const hImpact   = activityRatio > 1.8 ? -3 : activityRatio > 1.3 ? -1 : activityRatio < 0.3 && cnt === 0 ? 0 : 0.5;
+    const cImpact   = activityRatio > 1.5 ? 2  : activityRatio < 0.3 ? -0.5 : 0;
+    const covImpact = activityRatio > 2.0 ? -1 : 0.3;
+
+    runH   = Math.max(35, Math.min(99, runH   + hImpact));
+    runC   = Math.max(15, Math.min(95, runC   + cImpact));
+    runCov = Math.max(15, Math.min(95, runCov + covImpact));
+
+    health.push(Math.round(runH));
+    complexity.push(Math.round(runC));
+    coverage.push(Math.round(runCov));
   }
-  return { labels: months.map(m => m.label), health, complexity, coverage };
+
+  // Detect notable months: biggest drop and biggest rise in health
+  const events = [];
+  for (let i = 1; i < health.length; i++) {
+    const delta = health[i] - health[i - 1];
+    const cnt   = months[i].commits.length;
+    if (delta <= -4) {
+      events.push({
+        type: 'drop',
+        label: months[i].label,
+        delta: Math.round(delta),
+        commits: cnt,
+        desc: `Health dropped ${Math.abs(Math.round(delta))} points. ${cnt > 0 ? `${cnt} commits this month increased churn/complexity.` : 'Low activity period.'}`
+      });
+    } else if (delta >= 3) {
+      events.push({
+        type: 'rise',
+        label: months[i].label,
+        delta: Math.round(delta),
+        commits: cnt,
+        desc: `Health improved ${Math.round(delta)} points. ${cnt > 0 ? `${cnt} commits this month.` : ''} Complexity stabilised.`
+      });
+    }
+  }
+
+  return {
+    labels: months.map(m => m.label),
+    health, complexity, coverage,
+    events: events.slice(0, 4),   // at most 4 notable events
+    commitCounts,
+  };
 }
 
 /* ── Knowledge graph ───────────────────────────────────────────── */
@@ -361,13 +431,41 @@ function buildGraph(fileMetrics, repoDir) {
 /* ── Health score ──────────────────────────────────────────────── */
 function computeHealthScore(fileMetrics, commits, testInfo, deps) {
   const entries = Object.entries(fileMetrics);
-  const hotRatio = entries.length ? entries.filter(([, m]) => m.churn > 5).length / entries.length : 0.2;
-  const busRisk = entries.length ? entries.filter(([, m]) => m.authorCount === 1).length / entries.length : 0.3;
-  const complexity = Math.max(10, Math.round(100 - hotRatio * 60 - busRisk * 20));
-  const hotspot = Math.max(10, Math.round(100 - hotRatio * 80));
-  const coverage = Math.max(10, Math.min(95, testInfo.coverage || Math.round(60 - busRisk * 30)));
-  const dep = deps.score || 75;
-  const total = Math.max(10, Math.min(99, Math.round(0.30 * complexity + 0.25 * coverage + 0.25 * hotspot + 0.20 * dep)));
+  const totalFiles = entries.length || 1;
+
+  // Hotspot ratio: files with high churn (> 5 commits)
+  const hotRatio = entries.filter(([, m]) => m.churn > 5).length / totalFiles;
+  // Bus risk: single-author files
+  const busRisk  = entries.filter(([, m]) => m.authorCount === 1).length / totalFiles;
+
+  // Complexity score: penalise hotspots + single-owner files
+  const complexity = Math.max(10, Math.min(99, Math.round(100 - hotRatio * 55 - busRisk * 18)));
+
+  // Hotspot score: purely churn-complexity based
+  // With 0 files or 0 churn, it means we have no data — score 60 (neutral)
+  const hotspot = totalFiles <= 1
+    ? 60
+    : Math.max(10, Math.min(99, Math.round(100 - hotRatio * 75)));
+
+  // Coverage: use testInfo.coverage if available, else estimate from busRisk
+  // If no dep files at all, don't assume 80 — assume unknown (55)
+  const coverage = testInfo.coverage > 0
+    ? Math.max(10, Math.min(95, testInfo.coverage))
+    : Math.max(10, Math.round(55 - busRisk * 25));
+
+  // Dependency score: unknown state (no dep files) → 60, not 80
+  const dep = deps.totalDeps === 0 && deps.files.length === 0
+    ? 60
+    : Math.max(20, Math.min(99, deps.score || 60));
+
+  // Weighted total
+  const total = Math.max(10, Math.min(99, Math.round(
+    0.30 * complexity +
+    0.25 * coverage   +
+    0.25 * hotspot    +
+    0.20 * dep
+  )));
+
   return { total, complexity, hotspot, coverage, dep };
 }
 
@@ -432,6 +530,9 @@ function replayResult(cached, emit) {
   if (cached.testInfo) emit({ type: 'testCoverage', ...cached.testInfo });
   emit({ type: 'busfactor', modules: cached.busFactor });
   emit({ type: 'timeline', ...cached.timeline });
+  if (cached.timeline && cached.timeline.events && cached.timeline.events.length > 0) {
+    emit({ type: 'timelineEvents', events: cached.timeline.events });
+  }
   emit({ type: 'graph', nodes: cached.graph.nodes, edges: cached.graph.edges });
   emit({ type: 'score', ...cached.score });
   emit({ type: 'narrative', text: cached.narrative });

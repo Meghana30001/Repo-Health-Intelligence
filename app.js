@@ -567,6 +567,11 @@ const WS_URL = 'ws://localhost:3001';
 let ws = null;
 let wsReady = false;
 
+// Tracks real analysis results for cross-feature use
+window.lastAnalyzedScore = null;
+window.lastNarrative = null;
+window.lastRepo = null;
+
 function connectWS() {
   try {
     ws = new WebSocket(WS_URL);
@@ -590,19 +595,21 @@ connectWS();
 
 function handleWSEvent(ev) {
   switch (ev.type) {
-    case 'progress':      onProgress(ev);      break;
-    case 'commits':       onCommits(ev);       break;
-    case 'timeline':      onTimeline(ev);      break;
-    case 'hotspots':      onHotspots(ev);      break;
-    case 'busfactor':     onBusFactor(ev);     break;
-    case 'graph':         onGraph(ev);         break;
-    case 'score':         onScore(ev);         break;
-    case 'narrative':     onNarrative(ev);     break;
-    case 'done':          onDone(ev);          break;
-    case 'error':         onError(ev);         break;
-    case 'repoMeta':      onRepoMeta(ev);      break;
-    case 'dependencies':  onDependencies(ev);  break;
-    case 'testCoverage':  onTestCoverage(ev);  break;
+    case 'progress':       onProgress(ev);       break;
+    case 'commits':        onCommits(ev);        break;
+    case 'timeline':       onTimeline(ev);       break;
+    case 'timelineEvents': onTimelineEvents(ev); break;
+    case 'hotspots':       onHotspots(ev);       break;
+    case 'busfactor':      onBusFactor(ev);      break;
+    case 'graph':          onGraph(ev);          break;
+    case 'score':          onScore(ev);          break;
+    case 'narrative':      onNarrative(ev);      break;
+    case 'done':           onDone(ev);           break;
+    case 'error':          onError(ev);          break;
+    case 'repoMeta':       onRepoMeta(ev);       break;
+    case 'dependencies':   onDependencies(ev);   break;
+    case 'testCoverage':   onTestCoverage(ev);   break;
+    case 'authorCount':    onAuthorCount(ev);    break;
   }
 }
 
@@ -654,16 +661,32 @@ function onProgress(ev) {
 }
 
 function onCommits(ev) {
+  // Update hero terminal commit count
   const el = $('#commitCount');
   if (el) animateCounter(el, ev.count, '');
+  // Also update hero terminal line text
+  const termLines = $$('.term-line.dim', $('#terminalBody'));
+  for (const l of termLines) {
+    if (l.textContent.includes('commits')) {
+      const span = l.querySelector('.term-count');
+      if (span) animateCounter(span, ev.count, '');
+    }
+  }
+  window._lastCommitCount = ev.count;
 }
 
 function onTimeline(ev) {
   if (timelineChart) timelineChart.destroy();
   const ctx = $('#timelineChart');
   if (!ctx) return;
+
+  // Count total commits across all months
+  const totalCommits = (ev.commitCounts || []).reduce((a, b) => a + b, 0);
   const meta = document.querySelector('.panel-meta');
-  if (meta) meta.textContent = `Past 12 months · ${ev.health.length} data points`;
+  if (meta) meta.textContent = `Past 12 months · ${totalCommits || (window._lastCommitCount || 0)} commits analyzed`;
+
+  const minY = Math.max(20, Math.min(...ev.health, ...ev.complexity, ...ev.coverage) - 5);
+
   timelineChart = new Chart(ctx, {
     type: 'line',
     data: {
@@ -678,13 +701,43 @@ function onTimeline(ev) {
       responsive: true, interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { labels: { color: '#8888aa', font: { family: 'IBM Plex Mono', size: 11 }, boxWidth: 16 } },
-        tooltip: { backgroundColor: '#0f0f1a', borderColor: '#2a2a4a', borderWidth: 1, titleColor: '#f0f0f8', bodyColor: '#8888aa' },
+        tooltip: {
+          backgroundColor: '#0f0f1a', borderColor: '#2a2a4a', borderWidth: 1,
+          titleColor: '#f0f0f8', bodyColor: '#8888aa',
+          callbacks: {
+            afterBody(items) {
+              const idx = items[0]?.dataIndex;
+              if (ev.commitCounts && idx !== undefined) {
+                return [`Commits: ${ev.commitCounts[idx] || 0}`];
+              }
+              return [];
+            }
+          }
+        },
       },
       scales: {
         x: { grid: { color: 'rgba(30,30,56,0.8)' }, ticks: { color: '#444466', font: { family: 'IBM Plex Mono', size: 11 } } },
-        y: { min: 30, max: 100, grid: { color: 'rgba(30,30,56,0.8)' }, ticks: { color: '#444466', font: { family: 'IBM Plex Mono', size: 11 } } },
+        y: { min: minY, max: 100, grid: { color: 'rgba(30,30,56,0.8)' }, ticks: { color: '#444466', font: { family: 'IBM Plex Mono', size: 11 } } },
       },
     },
+  });
+}
+
+function onTimelineEvents(ev) {
+  const container = $('#timelineEvents');
+  if (!container || !ev.events || ev.events.length === 0) return;
+  container.innerHTML = '';
+  ev.events.forEach(e => {
+    const card = document.createElement('div');
+    card.className = `event-card ${e.type === 'drop' ? 'event-drop' : 'event-rise'}`;
+    card.innerHTML = `
+      <div class="ev-marker">${e.type === 'drop' ? '▼' : '▲'}</div>
+      <div class="ev-body">
+        <div class="ev-title">${e.label} — Health ${e.type === 'drop' ? 'Drop' : 'Rise'} (${e.delta > 0 ? '+' : ''}${e.delta} pts)</div>
+        <div class="ev-desc">${e.desc}</div>
+        <div class="ev-meta">${e.commits} commits · detected from commit velocity analysis</div>
+      </div>`;
+    container.appendChild(card);
   });
 }
 
@@ -782,6 +835,9 @@ function onGraph(ev) {
 }
 
 function onScore(ev) {
+  // Store for cross-feature use
+  window.lastAnalyzedScore = ev.total;
+
   const scoreEl = $('#healthScore'), gradeEl = $('#healthGrade'), fillEl = $('#healthFill');
   if (scoreEl) scoreEl.textContent = ev.total;
   if (gradeEl) {
@@ -790,27 +846,60 @@ function onScore(ev) {
     gradeEl.className = 'hs-grade ' + (ev.total >= 80 ? 'healthy' : ev.total >= 60 ? 'moderate' : 'at-risk');
   }
   if (fillEl) fillEl.style.width = ev.total + '%';
+
+  // Sub-score bars
   const ss = $('#subscores');
+  const depColor = ev.dep >= 70 ? '#22c55e' : ev.dep >= 50 ? '#f59e0b' : '#ef4444';
   if (ss) ss.innerHTML = [
-    ['Complexity Drift', ev.complexity, '#f59e0b'],
-    ['Test Coverage',    ev.coverage,   '#22c55e'],
-    ['Hotspot Risk',     ev.hotspot,    '#ef4444'],
-    ['Dependency Rot',   ev.dep,        '#22c55e'],
+    ['Complexity Drift', ev.complexity, ev.complexity >= 70 ? '#22c55e' : ev.complexity >= 50 ? '#f59e0b' : '#ef4444'],
+    ['Test Coverage',    ev.coverage,   ev.coverage   >= 70 ? '#22c55e' : ev.coverage   >= 50 ? '#f59e0b' : '#ef4444'],
+    ['Hotspot Risk',     ev.hotspot,    ev.hotspot    >= 70 ? '#22c55e' : ev.hotspot    >= 50 ? '#f59e0b' : '#ef4444'],
+    ['Dependency Rot',   ev.dep,        depColor],
   ].map(([l,v,c]) => `<div class="subscore"><div class="ss-label">${l}</div><div class="ss-bar"><div class="ss-fill" style="width:${v}%;background:${c}"></div></div><div class="ss-val">${v}</div></div>`).join('');
+
+  // Metric Breakdown formula tab
   const fwResult = document.querySelector('.fw-result');
   if (fwResult) fwResult.textContent = ev.total;
   document.querySelectorAll('.fw-row').forEach((row, i) => {
     const vals = [ev.complexity, ev.coverage, ev.hotspot, ev.dep];
     const v = row.querySelector('.fw-v');
-    if (v && vals[i] !== undefined) { v.textContent = vals[i]; v.className = 'fw-v ' + (vals[i] >= 70 ? 'score-green' : vals[i] >= 50 ? 'score-amber' : 'score-red'); }
+    if (v && vals[i] !== undefined) {
+      v.textContent = vals[i];
+      v.className = 'fw-v ' + (vals[i] >= 70 ? 'score-green' : vals[i] >= 50 ? 'score-amber' : 'score-red');
+    }
   });
+
+  // Update hero terminal score line
+  const termBody = $('#terminalBody');
+  if (termBody) {
+    const scoreLines = $$('.term-line.success', termBody);
+    for (const l of scoreLines) {
+      if (l.textContent.includes('Health Score') || l.textContent.includes('Score:')) {
+        const span = l.querySelector('.score-val');
+        if (span) span.textContent = ev.total;
+        break;
+      }
+    }
+  }
 }
 
 function onNarrative(ev) {
+  // Store for refresh
+  window.lastNarrative = ev.text;
   const llmBody = $('#llmBody');
   if (!llmBody) return;
   llmBody.style.opacity = '0';
-  setTimeout(() => { llmBody.innerHTML = `<p class="llm-text">${ev.text}</p>`; llmBody.style.opacity = '1'; llmBody.style.transition = 'opacity 0.4s'; }, 200);
+  setTimeout(() => {
+    llmBody.innerHTML = `<p class="llm-text">${ev.text}</p>`;
+    llmBody.style.opacity = '1';
+    llmBody.style.transition = 'opacity 0.4s';
+  }, 200);
+}
+
+function onAuthorCount(ev) {
+  window._lastAuthorCount = ev.count;
+  // Update hero terminal author info if present
+  addTerminalLine(`→ ${ev.count} unique contributor${ev.count !== 1 ? 's' : ''} detected`, 'info');
 }
 
 function onDone(ev) {
@@ -819,7 +908,24 @@ function onDone(ev) {
   if (btnText) btnText.textContent = 'Analyze Repository';
   const overlay = $('#analysisOverlay');
   if (overlay) setTimeout(() => overlay.classList.remove('active'), 1500);
-  addTerminalLine(`✓ ${ev.repo} — ${ev.commitCount} commits analyzed`, 'success');
+
+  // Store current repo
+  window.lastRepo = ev.repo;
+
+  // Update hero terminal with real results
+  const termBody = $('#terminalBody');
+  if (termBody) {
+    const score = window.lastAnalyzedScore || '—';
+    termBody.innerHTML = `
+      <div class="term-line"><span class="term-prompt">$</span> rhi analyze ${ev.repo}</div>
+      <div class="term-line dim">Cloning repository...</div>
+      <div class="term-line dim">Walking commit history... <span class="term-count" id="commitCount">${ev.commitCount.toLocaleString()}</span> commits</div>
+      <div class="term-line dim">Building Knowledge Graph...</div>
+      <div class="term-line success">✓ Health Score: <span class="score-val">${score}</span></div>
+      <div class="term-line ${score >= 80 ? 'success' : score >= 60 ? 'warn' : 'dim'}">→ Status: ${score >= 80 ? 'Healthy' : score >= 60 ? 'Moderate — monitor hotspots' : 'At Risk — action needed'}</div>
+      <div class="term-line success cursor-blink">✓ Analysis complete · ${ev.commitCount.toLocaleString()} commits_</div>
+    `;
+  }
 }
 
 function onError(ev) {
@@ -847,23 +953,20 @@ function addTerminalLine(text, cls = 'dim') {
 /* ═══════════════════════════════════════════════════════════════════
    14. LLM REFRESH
    ═══════════════════════════════════════════════════════════════════ */
-const llmNarratives = [
-  `<strong>Analysis of tensorflow/tensorflow:</strong> The repository demonstrates moderate health at <code>74.2/100</code>. The primary concern is hotspot risk in <code>src/core/kernels/</code> — this directory accounts for 31% of all commits but carries a cyclomatic complexity index of 2.4× the project average. The auth module saw significant coupling increase in March (PR #4821), introducing a new OAuth2 dependency chain without corresponding test coverage.`,
-  `<strong>Architectural Assessment:</strong> Dependency analysis reveals 14 transitive dependencies added over the last 90 days in the authentication layer. Three of these are sub-maintained packages (last commit >18 months). The knowledge graph shows a tightening coupling between <code>auth/</code> and <code>core/</code> — an architectural drift pattern that historically precedes integration failures.`,
-  `<strong>Risk Forecast:</strong> Based on churn-complexity analysis, <code>src/core/kernels/</code> has an 83% probability of containing a defect in the next 30 days if left unaddressed. The bus factor of 1 for the OAuth module means any developer absence will create a knowledge bottleneck. Immediate actions: pair-program the OAuth refactor, add regression tests for kernels, audit dependency versions.`,
-];
-let llmIndex = 0;
-
 function refreshLLM() {
-  llmIndex = (llmIndex + 1) % llmNarratives.length;
   const llmBody = $('#llmBody');
   if (!llmBody) return;
-  llmBody.style.opacity = '0';
-  setTimeout(() => {
-    llmBody.innerHTML = `<p class="llm-text">${llmNarratives[llmIndex]}</p>`;
-    llmBody.style.opacity = '1';
-    llmBody.style.transition = 'opacity 0.4s';
-  }, 200);
+  // If a real narrative exists, re-display it (fade out/in)
+  if (window.lastNarrative) {
+    llmBody.style.opacity = '0';
+    setTimeout(() => {
+      llmBody.innerHTML = `<p class="llm-text">${window.lastNarrative}</p>`;
+      llmBody.style.opacity = '1';
+      llmBody.style.transition = 'opacity 0.4s';
+    }, 200);
+  } else {
+    llmBody.innerHTML = '<p class="llm-text" style="color:#444466;font-family:var(--font-mono);font-size:.85rem;">Run an analysis first to generate a narrative.<span class="cursor-blink"></span></p>';
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -882,14 +985,22 @@ function simulatePR() {
   if (prEl) prEl.textContent = pr.startsWith('PR') ? pr : `PR #${pr}`;
   if (labelEl) labelEl.textContent = 'Predicting...';
   scoreEl.textContent = '—';
+  if (changeEl) changeEl.textContent = '';
 
   setTimeout(() => {
-    const delta = -(Math.random() * 6 + 0.5).toFixed(1);
-    const newScore = (74.2 + parseFloat(delta)).toFixed(1);
+    // Use real analyzed score as base, fallback to 70
+    const base = window.lastAnalyzedScore || 70;
+    const deltaVal = parseFloat((Math.random() * 5 + 0.5).toFixed(1));
+    // PRs more likely to decrease health slightly
+    const sign = Math.random() > 0.3 ? -1 : 1;
+    const delta = sign * deltaVal;
+    const newScore = Math.max(10, Math.min(99, base + delta)).toFixed(1);
     if (labelEl) labelEl.textContent = 'Predicted';
     scoreEl.textContent = newScore;
-    changeEl.textContent = `▼ ${Math.abs(delta)}`;
-    changeEl.className = 'ms-change negative';
+    if (changeEl) {
+      changeEl.textContent = `${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)}`;
+      changeEl.className = `ms-change ${delta >= 0 ? 'positive' : 'negative'}`;
+    }
   }, 1200);
 }
 

@@ -318,30 +318,13 @@
     <div class="health-overview">
       <div class="health-score-card">
         <div class="hs-label">Overall Health Score</div>
-        <div class="hs-value" id="healthScore">74.2</div>
-        <div class="hs-grade moderate" id="healthGrade">Moderate</div>
-        <div class="hs-bar"><div class="hs-fill" id="healthFill" style="width:74.2%"></div></div>
+        <div class="hs-value" id="healthScore">—</div>
+        <div class="hs-grade" id="healthGrade">Awaiting analysis</div>
+        <div class="hs-bar"><div class="hs-fill" id="healthFill" style="width:0%"></div></div>
       </div>
       <div class="health-subscores" id="subscores">
-        <div class="subscore">
-          <div class="ss-label">Complexity Drift</div>
-          <div class="ss-bar"><div class="ss-fill" style="width:61%; background: #f59e0b"></div></div>
-          <div class="ss-val">61</div>
-        </div>
-        <div class="subscore">
-          <div class="ss-label">Test Coverage</div>
-          <div class="ss-bar"><div class="ss-fill" style="width:78%; background: #22c55e"></div></div>
-          <div class="ss-val">78</div>
-        </div>
-        <div class="subscore">
-          <div class="ss-label">Hotspot Risk</div>
-          <div class="ss-bar"><div class="ss-fill" style="width:55%; background: #ef4444"></div></div>
-          <div class="ss-val">55</div>
-        </div>
-        <div class="subscore">
-          <div class="ss-label">Dependency Rot</div>
-          <div class="ss-bar"><div class="ss-fill" style="width:82%; background: #22c55e"></div></div>
-          <div class="ss-val">82</div>
+        <div style="grid-column:1/-1;padding:18px 8px;text-align:center;color:var(--text-muted);font-family:var(--font-mono);font-size:.82rem;">
+          ⬡ Run an analysis to see real sub-scores
         </div>
       </div>
     </div>
@@ -417,11 +400,11 @@
         <div class="formula-block">
           <div class="formula-title">Health Score =</div>
           <div class="formula-weights">
-            <div class="fw-row"><span class="fw-w">0.30</span><span class="fw-times">×</span><span class="fw-m">Complexity Drift</span><span class="fw-v score-amber">61</span></div>
-            <div class="fw-row"><span class="fw-w">0.25</span><span class="fw-times">×</span><span class="fw-m">Test Coverage</span><span class="fw-v score-green">78</span></div>
-            <div class="fw-row"><span class="fw-w">0.25</span><span class="fw-times">×</span><span class="fw-m">Hotspot Risk</span><span class="fw-v score-red">55</span></div>
-            <div class="fw-row"><span class="fw-w">0.20</span><span class="fw-times">×</span><span class="fw-m">Dependency Rot</span><span class="fw-v score-green">82</span></div>
-            <div class="fw-total"><span>= </span><span class="fw-result">74.2</span></div>
+            <div class="fw-row"><span class="fw-w">0.30</span><span class="fw-times">×</span><span class="fw-m">Complexity Drift</span><span class="fw-v score-amber">—</span></div>
+            <div class="fw-row"><span class="fw-w">0.25</span><span class="fw-times">×</span><span class="fw-m">Test Coverage</span><span class="fw-v score-green">—</span></div>
+            <div class="fw-row"><span class="fw-w">0.25</span><span class="fw-times">×</span><span class="fw-m">Hotspot Risk</span><span class="fw-v score-red">—</span></div>
+            <div class="fw-row"><span class="fw-w">0.20</span><span class="fw-times">×</span><span class="fw-m">Dependency Rot</span><span class="fw-v score-green">—</span></div>
+            <div class="fw-total"><span>= </span><span class="fw-result">—</span></div>
           </div>
         </div>
         <div class="metrics-detail-grid">
@@ -455,15 +438,15 @@
     </div>
 
     <!-- LLM Explanation Panel -->
-    <div class="llm-panel">
+    <div class="llm-panel" id="llm-panel">
       <div class="llm-header">
         <span class="llm-icon">λ</span>
         <span class="llm-title">AI Engineering Analyst</span>
         <span class="llm-badge">Powered by LLM · Justified usage only</span>
       </div>
       <div class="llm-body" id="llmBody">
-        <p class="llm-text">
-          <strong>Analysis of tensorflow/tensorflow:</strong> The repository demonstrates moderate health at 74.2/100. The primary concern is hotspot risk in <code>src/core/kernels/</code> — this directory accounts for 31% of all commits but carries a cyclomatic complexity index of 2.4× the project average. The authentication module saw significant coupling increase in March (PR #4821), introducing a new OAuth2 dependency chain that was not accompanied by corresponding test coverage. Recommend prioritizing refactoring of the kernels module and expanding test coverage in auth-related code paths.
+        <p class="llm-text" style="color:#444466;font-family:var(--font-mono);font-size:.85rem;">
+          Enter a GitHub repository above and click <strong style="color:var(--accent)">Analyze Repository</strong> to generate an AI engineering narrative.<span class="cursor-blink"></span>
         </p>
       </div>
       <button class="llm-refresh-btn" onclick="refreshLLM()">↻ Refresh Analysis</button>
