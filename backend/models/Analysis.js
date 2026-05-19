@@ -25,10 +25,10 @@ const RepoMetaSchema = new mongoose.Schema({
 }, { _id: false });
 
 const AnalysisSchema = new mongoose.Schema({
-  slug:        { type: String, required: true, index: true },
-  analyzedAt:  { type: Date,   default: Date.now, index: true },
+  slug:        { type: String, required: true },   // indexed below — no duplicate
+  analyzedAt:  { type: Date,   default: Date.now },
   commitCount: { type: Number, default: 0 },
-  depth:       { type: Number, default: 200 },
+  depth:       { type: Number, default: 500 },
 
   score:     ScoreSchema,
   repoMeta:  RepoMetaSchema,
@@ -46,7 +46,13 @@ const AnalysisSchema = new mongoose.Schema({
   collection: 'analyses',
 });
 
-// Only one record per slug — upsert on re-analysis
-AnalysisSchema.index({ slug: 1, analyzedAt: -1 });
+/* ── Indexes ─────────────────────────────────────────────────────
+   1. Unique slug   — enforces one record per repo (supports upsert)
+   2. analyzedAt    — for sorting recent analyses (descending)
+   3. score.total   — for querying by health score
+   ─────────────────────────────────────────────────────────────── */
+AnalysisSchema.index({ slug: 1 }, { unique: true });
+AnalysisSchema.index({ analyzedAt: -1 });
+AnalysisSchema.index({ 'score.total': -1 });
 
 module.exports = mongoose.model('Analysis', AnalysisSchema);

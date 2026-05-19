@@ -66,7 +66,7 @@
     </div>
     <div class="hero-stats">
       <div class="stat-item">
-        <div class="stat-number" data-target="500">0</div>
+        <div class="stat-number" data-target="847">0</div>
         <div class="stat-label">Commits Analyzed</div>
       </div>
       <div class="stat-divider"></div>
@@ -288,8 +288,9 @@
       <input type="text" id="repoInput" placeholder="owner/repo or full GitHub URL" value="facebook/react"/>
       <select id="depthSelect" class="depth-select" title="Commit depth">
         <option value="50">Quick (50)</option>
-        <option value="200" selected>Standard (200)</option>
-        <option value="500">Deep (500)</option>
+        <option value="200">Standard (200)</option>
+        <option value="500" selected>Deep (500)</option>
+        <option value="1000">Full (1000)</option>
       </select>
       <button class="analyze-btn" onclick="runAnalysis()">
         <span id="analyzeBtnText">Analyze Repository</span>
