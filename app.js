@@ -544,9 +544,57 @@ window.addEventListener('load', () => {
 /* ═══════════════════════════════════════════════════════════════════
    13. ANALYZE REPO — Real-time WebSocket powered
    ═══════════════════════════════════════════════════════════════════ */
-const WS_URL = 'ws://localhost:3001';
+/* ─── Smart WS URL: local dev uses localhost, Vercel uses ngrok URL from localStorage ─── */
+const IS_LOCAL = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+const STORED_WS = localStorage.getItem('rhi_backend_url');
+const WS_URL = IS_LOCAL
+  ? 'ws://localhost:3001'
+  : (STORED_WS || 'ws://localhost:3001');   // on Vercel, use stored ngrok URL
+
 let ws = null;
 let wsReady = false;
+
+/* ─── Show backend URL configurator when on Vercel ─── */
+if (!IS_LOCAL) {
+  document.addEventListener('DOMContentLoaded', () => {
+    const existing = document.getElementById('backendConfig');
+    if (existing) return;
+    const bar = document.createElement('div');
+    bar.id = 'backendConfig';
+    bar.style.cssText = `
+      position:fixed; bottom:16px; right:16px; z-index:9999;
+      background:#0f0f1a; border:1px solid #6366f1; border-radius:10px;
+      padding:12px 16px; font-family:IBM Plex Mono,monospace; font-size:.78rem;
+      color:#8888aa; max-width:340px; box-shadow:0 4px 24px rgba(99,102,241,.3);
+    `;
+    const saved = localStorage.getItem('rhi_backend_url') || '';
+    bar.innerHTML = `
+      <div style="color:#f0f0f8;font-weight:600;margin-bottom:8px;">⚡ Backend URL</div>
+      <div style="color:#8888aa;margin-bottom:8px;font-size:.72rem;">
+        Paste your <strong style="color:#6366f1">ngrok WSS URL</strong> to connect to your local backend:
+      </div>
+      <input id="ngrokInput" type="text" value="${saved}"
+        placeholder="wss://xxxx.ngrok-free.app"
+        style="width:100%;padding:6px 10px;background:#1a1a2e;border:1px solid #2a2a4a;border-radius:6px;
+               color:#f0f0f8;font-family:inherit;font-size:.78rem;box-sizing:border-box;margin-bottom:8px;">
+      <div style="display:flex;gap:8px;">
+        <button onclick="
+          const v=document.getElementById('ngrokInput').value.trim();
+          if(v){localStorage.setItem('rhi_backend_url',v);location.reload();}
+        " style="flex:1;padding:6px;background:#6366f1;border:none;border-radius:6px;color:#fff;cursor:pointer;font-size:.75rem;font-family:inherit;">
+          Connect
+        </button>
+        <button onclick="document.getElementById('backendConfig').style.display='none'"
+          style="padding:6px 10px;background:#1a1a2e;border:1px solid #2a2a4a;border-radius:6px;color:#8888aa;cursor:pointer;font-size:.75rem;font-family:inherit;">
+          ✕
+        </button>
+      </div>
+      ${saved ? `<div style="color:#22c55e;margin-top:6px;font-size:.7rem;">✓ Using: ${saved}</div>` : ''}
+    `;
+    document.body.appendChild(bar);
+  });
+}
+
 
 // Tracks real analysis results for cross-feature use
 window.lastAnalyzedScore = null;
