@@ -21,10 +21,17 @@ async function getCached(slug) {
       const cutoff = new Date(Date.now() - CACHE_TTL_MS);
       const doc = await Analysis.findOne({ slug, analyzedAt: { $gte: cutoff } })
         .sort({ analyzedAt: -1 }).lean();
-      if (doc) { console.log(`[Cache] MongoDB hit for ${slug}`); return doc; }
+      if (doc) {
+        console.log(`[Cache] MongoDB hit for ${slug} (saved ${Math.round((Date.now() - new Date(doc.analyzedAt)) / 60000)}m ago)`);
+        return doc;
+      } else {
+        console.log(`[Cache] MongoDB miss for ${slug} — will run fresh analysis`);
+      }
     } catch (err) {
       console.warn('[Cache] MongoDB read error:', err.message);
     }
+  } else {
+    console.warn('[Cache] MongoDB not ready — skipping DB lookup');
   }
   // Fallback: in-memory
   const e = memCache.get(slug);
@@ -37,15 +44,18 @@ async function setCache(slug, result) {
   // Persist to MongoDB
   if (isReady()) {
     try {
-      await Analysis.findOneAndUpdate(
+      console.log(`[MongoDB] Saving analysis for ${slug}...`);
+      const saved = await Analysis.findOneAndUpdate(
         { slug },
         { $set: { ...result, slug, analyzedAt: new Date() } },
         { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
       );
-      console.log(`[MongoDB] Saved analysis: ${slug}`);
+      console.log(`[MongoDB] ✓ Saved: ${slug} | score: ${saved.score?.total} | commits: ${saved.commitCount}`);
     } catch (err) {
-      console.warn('[MongoDB] Write error:', err.message);
+      console.error('[MongoDB] ✗ Write FAILED:', err.message);
     }
+  } else {
+    console.warn('[MongoDB] Not ready — analysis NOT saved to DB for:', slug);
   }
   // Always keep in-memory copy too for speed
   memCache.set(slug, { result, ts: Date.now() });
