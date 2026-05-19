@@ -1,21 +1,24 @@
 /* ═══════════════════════════════════════════════════════════════════
    REPO HEALTH IQ — server.js
    Express HTTP + WebSocket server
-   • Connects to MongoDB on startup
+   • Loads .env config via dotenv
+   • Connects to MongoDB (RepoHealthIntelligence) on startup
    • Serves static frontend files
-   • Accepts WebSocket connections for real-time analysis
-   • REST API: GET /api/analyses, GET /api/analyses/:slug, DELETE /api/analyses/:slug
+   • WebSocket for real-time analysis streaming
+   • REST API: /api/health, /api/analyses, DELETE /api/analyses/:slug
    ═══════════════════════════════════════════════════════════════════ */
+
+require('dotenv').config();
 
 const express = require('express');
 const http = require('http');
 const path = require('path');
 const WebSocket = require('ws');
 const { analyzeRepo } = require('./analyzer');
-const { connectDB, isReady } = require('./db');
+const { connectDB, isReady, getStatus } = require('./db');
 const Analysis = require('./models/Analysis');
 
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 const FRONTEND_DIR = path.join(__dirname, '..');
 
 const app = express();
@@ -36,7 +39,19 @@ app.use(express.static(FRONTEND_DIR));
 
 /* ─── Health check ───────────────────────────────────────────────── */
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString(), db: isReady() ? 'connected' : 'unavailable' });
+  const db = getStatus();
+  res.json({
+    status: 'ok',
+    time: new Date().toISOString(),
+    server: `http://localhost:${PORT}`,
+    websocket: `ws://localhost:${PORT}`,
+    database: {
+      state:  db.state,
+      ready:  db.ready,
+      name:   db.dbName,
+      host:   db.host,
+    },
+  });
 });
 
 /* ─── REST: List recent analyses ─────────────────────────────────── */
