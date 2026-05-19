@@ -569,7 +569,13 @@ function connectWS() {
       setTimeout(connectWS, 3000);
     };
     ws.onerror = () => { wsReady = false; };
-    ws.onmessage = (e) => { try { handleWSEvent(JSON.parse(e.data)); } catch(_) {} };
+    ws.onmessage = (e) => {
+      try {
+        handleWSEvent(JSON.parse(e.data));
+      } catch(err) {
+        console.error('[WS] Handler error:', err.message, err.stack);
+      }
+    };
   } catch(_) { setTimeout(connectWS, 3000); }
 }
 connectWS();
@@ -681,16 +687,19 @@ function onTimeline(ev) {
   const meta = document.querySelector('.panel-meta');
   if (meta) meta.textContent = `Past 12 months · ${totalCommits || (window._lastCommitCount || 0)} commits analyzed`;
 
-  const minY = Math.max(20, Math.min(...ev.health, ...ev.complexity, ...ev.coverage) - 5);
+  const health     = ev.health     && ev.health.length     ? ev.health     : [50];
+  const complexity  = ev.complexity && ev.complexity.length ? ev.complexity : [50];
+  const coverage    = ev.coverage   && ev.coverage.length   ? ev.coverage   : [50];
+  const minY = Math.max(20, Math.min(...health, ...complexity, ...coverage) - 5);
 
   timelineChart = new Chart(ctx, {
     type: 'line',
     data: {
       labels: ev.labels,
       datasets: [
-        { label: 'Health Score', data: ev.health,     borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.08)', borderWidth: 2.5, tension: 0.4, fill: true, pointBackgroundColor: '#6366f1', pointRadius: 4, pointHoverRadius: 6 },
-        { label: 'Complexity',   data: ev.complexity, borderColor: '#f59e0b', backgroundColor: 'transparent', borderWidth: 1.5, tension: 0.4, borderDash: [4,4], pointRadius: 2 },
-        { label: 'Coverage',     data: ev.coverage,   borderColor: '#22c55e', backgroundColor: 'transparent', borderWidth: 1.5, tension: 0.4, borderDash: [4,4], pointRadius: 2 },
+        { label: 'Health Score', data: health,     borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.08)', borderWidth: 2.5, tension: 0.4, fill: true, pointBackgroundColor: '#6366f1', pointRadius: 4, pointHoverRadius: 6 },
+        { label: 'Complexity',   data: complexity, borderColor: '#f59e0b', backgroundColor: 'transparent', borderWidth: 1.5, tension: 0.4, borderDash: [4,4], pointRadius: 2 },
+        { label: 'Coverage',     data: coverage,   borderColor: '#22c55e', backgroundColor: 'transparent', borderWidth: 1.5, tension: 0.4, borderDash: [4,4], pointRadius: 2 },
       ],
     },
     options: {
@@ -719,7 +728,7 @@ function onTimeline(ev) {
   });
 
   // Drive architectural drift chart with real complexity trend data
-  renderDriftChart(ev.complexity, ev.labels);
+  if (typeof renderDriftChart === 'function') renderDriftChart(complexity, ev.labels);
 }
 
 function onTimelineEvents(ev) {
@@ -761,18 +770,27 @@ function onHotspots(ev) {
   }
 
   hotspotRendered = true;
+}
 
-  // ── Reliable tab switch using id ──
-  const allBtns   = document.querySelectorAll('.dash-tab');
-  const allPanels = document.querySelectorAll('.tab-panel');
-  const hotspotBtn   = document.getElementById('tabBtnHotspot');
-  const hotspotPanel = document.getElementById('tab-hotspot');
-
-  allBtns.forEach(b => b.classList.remove('active'));
-  allPanels.forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
-
-  if (hotspotBtn)   { hotspotBtn.classList.add('active'); hotspotBtn.innerHTML = 'Hotspot Map <span class="tab-badge">LIVE</span>'; setTimeout(() => { hotspotBtn.innerHTML = 'Hotspot Map'; }, 4000); }
-  if (hotspotPanel) { hotspotPanel.classList.add('active'); hotspotPanel.style.display = 'block'; }
+function showHotspotDetail(item) {
+  const existing = document.getElementById('hotspotDetailModal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'hotspotDetailModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border-bright);border-radius:12px;padding:28px 32px;max-width:480px;width:90%;">
+      <div style="font-family:var(--font-mono);font-size:1rem;color:var(--text-primary);margin-bottom:12px;">🔥 ${item.path}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div style="background:var(--bg-elevated);padding:10px 14px;border-radius:8px;"><div style="color:var(--text-muted);font-size:.72rem;font-family:var(--font-mono);">CHURN</div><div style="color:var(--accent);font-size:1.4rem;font-weight:700;">${item.churn}</div></div>
+        <div style="background:var(--bg-elevated);padding:10px 14px;border-radius:8px;"><div style="color:var(--text-muted);font-size:.72rem;font-family:var(--font-mono);">RISK LEVEL</div><div style="color:${item.level==='high'?'var(--red)':item.level==='medium'?'var(--amber)':'var(--green)'};font-size:1.4rem;font-weight:700;">${item.risk}</div></div>
+        <div style="background:var(--bg-elevated);padding:10px 14px;border-radius:8px;"><div style="color:var(--text-muted);font-size:.72rem;font-family:var(--font-mono);">AUTHORS</div><div style="color:var(--text-primary);font-size:1.4rem;font-weight:700;">${item.authorCount||'—'}</div></div>
+        <div style="background:var(--bg-elevated);padding:10px 14px;border-radius:8px;"><div style="color:var(--text-muted);font-size:.72rem;font-family:var(--font-mono);">COMPLEXITY</div><div style="color:var(--text-primary);font-size:1.4rem;font-weight:700;">${item.complexity}</div></div>
+      </div>
+      <button onclick="document.getElementById('hotspotDetailModal').remove()" style="width:100%;padding:10px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:var(--font-mono);font-size:.85rem;cursor:pointer;">Close</button>
+    </div>`;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
 }
 
 function onBusFactor(ev) {
@@ -906,7 +924,7 @@ function onDone(ev) {
   if (btn) btn.classList.remove('loading');
   if (btnText) btnText.textContent = 'Analyze Repository';
   const overlay = $('#analysisOverlay');
-  if (overlay) setTimeout(() => overlay.classList.remove('active'), 1500);
+  if (overlay) setTimeout(() => overlay.classList.remove('active'), 300);
 
   // Store current repo
   window.lastRepo = ev.repo;
@@ -925,6 +943,9 @@ function onDone(ev) {
       <div class="term-line success cursor-blink">✓ Analysis complete · ${ev.commitCount.toLocaleString()} commits_</div>
     `;
   }
+
+  // Refresh recent analyses panel after MongoDB save settles
+  setTimeout(loadRecentAnalyses, 1800);
 }
 
 function onError(ev) {
@@ -1135,7 +1156,6 @@ async function loadRecentAnalyses() {
       chip.addEventListener('click', () => {
         const input = $('#repoInput');
         if (input) { input.value = a.slug; input.focus(); }
-        // Scroll to dashboard
         document.getElementById('dashboard')?.scrollIntoView({ behavior: 'smooth' });
       });
       chips.appendChild(chip);
@@ -1143,24 +1163,55 @@ async function loadRecentAnalyses() {
 
     panel.style.display = 'flex';
   } catch (_) {
-    // Silently ignore if API unavailable (no MongoDB)
+    // Silently ignore if API unavailable
   }
 }
 
 async function clearRecentAnalyses() {
   const panel = $('#recentAnalyses');
   if (panel) panel.style.display = 'none';
-  // Note: this only hides the panel locally; actual DB records remain
 }
 
-// Refresh recent panel after each successful analysis
-const _origOnDone = onDone;
-function onDone(ev) {
-  _origOnDone(ev);
-  setTimeout(loadRecentAnalyses, 1500); // refresh after save completes
+/* ── Architectural drift sparkline ─────────────────────────────── */
+function renderDriftChart(complexityData, labels) {
+  const el = document.getElementById('driftChart');
+  if (!el || !complexityData || !complexityData.length) return;
+
+  const data = complexityData;
+  const last  = data[data.length - 1];
+  const first = data[0];
+  const trend = last - first;
+
+  // Update drift value indicator
+  const driftVal = document.querySelector('.drift-val');
+  if (driftVal) {
+    const arrow = trend > 2 ? '↗ Rising' : trend < -2 ? '↘ Falling' : '→ Stable';
+    driftVal.textContent = `${arrow} (${trend > 0 ? '+' : ''}${Math.round(trend)})`;
+    driftVal.className = 'drift-val' + (trend < -2 ? ' falling' : '');
+  }
+
+  // Draw sparkline SVG
+  const W = el.offsetWidth || 260, H = 56;
+  const min = Math.min(...data), max = Math.max(...data);
+  const range = Math.max(max - min, 1);
+  const pts = data.map((v, i) => [
+    Math.round((i / (data.length - 1)) * W),
+    Math.round(H - ((v - min) / range) * (H - 8) - 4)
+  ]);
+  const polyline = pts.map(p => p.join(',')).join(' ');
+  const fillPts  = `0,${H} ` + polyline + ` ${W},${H}`;
+  const color = trend > 2 ? '#f59e0b' : trend < -2 ? '#22c55e' : '#6366f1';
+
+  el.innerHTML = `
+    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+      <polygon points="${fillPts}" fill="${color}" opacity="0.10"/>
+      <polyline points="${polyline}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>
+      ${pts.map((p, i) => `<circle cx="${p[0]}" cy="${p[1]}" r="2.5" fill="${color}" opacity="0.7"
+        <title>${labels?.[i]||''}: ${data[i]}</title>
+      />`).join('')}
+    </svg>`;
 }
 
-// Load on page start
+// Load recent panel on page start
 document.addEventListener('DOMContentLoaded', loadRecentAnalyses);
-// Also try immediately in case DOMContentLoaded already fired
 loadRecentAnalyses();
