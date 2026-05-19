@@ -51,19 +51,22 @@ async function setCache(slug, result) {
   memCache.set(slug, { result, ts: Date.now() });
 }
 
-/* ── GitHub API helper ─────────────────────────────────────────── */
+/* ── GitHub API helper (5s timeout) ───────────────────────────── */
 function githubAPI(endpoint, token) {
   return new Promise((resolve) => {
     const opts = {
       hostname: 'api.github.com',
       path: endpoint,
       headers: { 'User-Agent': 'RepoHealthIQ', ...(token ? { Authorization: `token ${token}` } : {}) },
+      timeout: 5000,
     };
-    https.get(opts, (res) => {
+    const req = https.get(opts, (res) => {
       let data = '';
       res.on('data', d => data += d);
       res.on('end', () => { try { resolve(JSON.parse(data)); } catch { resolve(null); } });
-    }).on('error', () => resolve(null));
+    });
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => { req.destroy(); resolve(null); });
   });
 }
 
@@ -119,17 +122,17 @@ async function analyzeRepo(repoInput, emit, options = {}) {
       emit({ type: 'progress', stage: 'api', message: `✓ ${repoMeta.language} · ⭐ ${repoMeta.stars.toLocaleString()} · ${repoMeta.forks.toLocaleString()} forks`, pct: 10 });
     }
 
-    // ── Stage 2: Clone ──
+    // ── Stage 2: Clone (blobless for speed) ──
     emit({ type: 'progress', stage: 'clone', message: `Cloning ${slug} (depth ${depth})...`, pct: 12 });
     const alreadyCloned = fs.existsSync(path.join(repoDir, '.git'));
     if (alreadyCloned) {
       emit({ type: 'progress', stage: 'clone', message: `Updating existing clone...`, pct: 14 });
-      try { await execAsync(`git -C "${repoDir}" fetch --depth=${depth} --quiet 2>&1`, { timeout: 60000 }); } catch (_) {}
+      try { await execAsync(`git -C "${repoDir}" fetch --depth=${depth} --quiet 2>&1`, { timeout: 30000 }); } catch (_) {}
     } else {
       fs.mkdirSync(repoDir, { recursive: true });
       await execAsync(
-        `git clone --depth ${depth} --single-branch --quiet "${repoUrl}" "${repoDir}" 2>&1`,
-        { timeout: 120000 }
+        `git clone --depth ${depth} --single-branch --filter=blob:none --quiet "${repoUrl}" "${repoDir}" 2>&1`,
+        { timeout: 90000 }
       );
     }
     emit({ type: 'progress', stage: 'clone', message: `✓ Repository ready`, pct: 22 });
@@ -149,46 +152,45 @@ async function analyzeRepo(repoInput, emit, options = {}) {
     const fileMetrics = computeFileMetrics(commits);
     emit({ type: 'progress', stage: 'metrics', message: `Analyzed ${Object.keys(fileMetrics).length.toLocaleString()} files`, pct: 52 });
 
-    // ── Stage 5: Hotspots ──
-    emit({ type: 'progress', stage: 'hotspot', message: `Building hotspot risk map...`, pct: 55 });
-    const hotspots = buildHotspots(fileMetrics);
+    // ── Stage 5-10: Run independent stages IN PARALLEL ──
+    emit({ type: 'progress', stage: 'parallel', message: `Running analysis stages in parallel...`, pct: 55 });
+
+    const [hotspots, deps, testInfo, busFactor, timeline, graph] = await Promise.all([
+      // Stage 5: Hotspots (sync, from fileMetrics)
+      Promise.resolve(buildHotspots(fileMetrics)),
+
+      // Stage 6: Dependency scan (async, I/O bound)
+      scanDependencies(repoDir),
+
+      // Stage 7: Test detection (sync, file-system checks)
+      Promise.resolve(detectTests(repoDir, fileMetrics)),
+
+      // Stage 8: Bus factor (sync, from commits + fileMetrics)
+      Promise.resolve(computeBusFactor(commits, fileMetrics)),
+
+      // Stage 9: Timeline (sync, from commits + fileMetrics)
+      Promise.resolve(buildTimeline(commits, fileMetrics)),
+
+      // Stage 10: Graph (sync, from fileMetrics)
+      Promise.resolve(buildGraph(fileMetrics, repoDir)),
+    ]);
+
+    // Emit all parallel results at once
     emit({ type: 'hotspots', files: hotspots });
-
-    // ── Stage 6: Dependency scan ──
-    emit({ type: 'progress', stage: 'deps', message: `Scanning dependencies...`, pct: 60 });
-    const deps = await scanDependencies(repoDir);
     emit({ type: 'dependencies', ...deps });
-
-    // ── Stage 7: Test detection ──
-    emit({ type: 'progress', stage: 'tests', message: `Detecting test coverage signals...`, pct: 65 });
-    const testInfo = detectTests(repoDir, fileMetrics);
     emit({ type: 'testCoverage', ...testInfo });
-
-    // ── Stage 8: Bus factor ──
-    emit({ type: 'progress', stage: 'bus', message: `Computing bus factor...`, pct: 70 });
-    const busFactor = computeBusFactor(commits, fileMetrics);
     emit({ type: 'busfactor', modules: busFactor });
-
-    // ── Stage 9: Timeline ──
-    emit({ type: 'progress', stage: 'timeline', message: `Building health timeline...`, pct: 75 });
-    const timeline = buildTimeline(commits, fileMetrics);
     emit({ type: 'timeline', ...timeline });
-    // Emit real timeline events (notable drops/rises)
-    if (timeline.events && timeline.events.length > 0) {
-      emit({ type: 'timelineEvents', events: timeline.events });
-    }
-
-    // ── Stage 10: Graph ──
-    emit({ type: 'progress', stage: 'graph', message: `Building knowledge graph...`, pct: 82 });
-    const graph = buildGraph(fileMetrics, repoDir);
+    if (timeline.events && timeline.events.length > 0) emit({ type: 'timelineEvents', events: timeline.events });
     emit({ type: 'graph', nodes: graph.nodes, edges: graph.edges });
+    emit({ type: 'progress', stage: 'parallel', message: `✓ All stages complete`, pct: 85 });
 
     // ── Stage 11: Health score ──
     emit({ type: 'progress', stage: 'score', message: `Computing health score...`, pct: 88 });
     const score = computeHealthScore(fileMetrics, commits, testInfo, deps);
     emit({ type: 'score', ...score });
 
-    // ── Stage 12: Narrative ──
+    // ── Stage 12: Narrative (capped at 8s) ──
     emit({ type: 'progress', stage: 'narrative', message: `Generating analysis narrative...`, pct: 93 });
     const narrative = await generateNarrative(slug, score, hotspots, busFactor, commits, repoMeta, testInfo, deps, geminiKey);
     emit({ type: 'narrative', text: narrative });
@@ -511,11 +513,7 @@ async function generateNarrative(slug, score, hotspots, busFactor, commits, meta
   const uniqueAuthors = new Set(commits.map(c => c.author).filter(Boolean)).size;
 
   if (geminiKey) {
-    try {
-      // COST JUSTIFICATION: Instead of sending raw code or full git history, we send 
-      // only the highly aggregated final metrics. This reduces token usage to ~150 tokens, 
-      // costing a fraction of a cent per request while providing expert architectural insights.
-      const prompt = `You are a strict, senior software architect analyzing the repository "${slug}".
+    const prompt = `You are a strict, senior software architect analyzing the repository "${slug}".
 Provide a concise, 3-sentence architectural health summary using HTML tags for styling (e.g. <strong>, <code>, <span style="color:#f59e0b">).
 Data:
 - Health Score: ${score.total}/100 (${grade})
@@ -525,11 +523,19 @@ Data:
 - Test Coverage: ${testInfo.ratio}% (${testInfo.testFiles} test files)
 Output HTML only without markdown blocks.`;
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-      });
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+          signal: controller.signal,
+        }
+      );
+      clearTimeout(timer);
       const data = await response.json();
       if (data && data.candidates && data.candidates[0]) {
         let text = data.candidates[0].content.parts[0].text.trim();
@@ -537,9 +543,14 @@ Output HTML only without markdown blocks.`;
         return text + ` <br><br><small style="color:var(--text-muted)"><em>Narrative generated by <strong>Gemini 1.5 Flash</strong></em></small>`;
       }
     } catch (err) {
-      console.error('[LLM] Error calling Gemini API:', err);
+      if (err.name === 'AbortError') {
+        console.warn('[LLM] Gemini timed out after 8s — using fallback narrative');
+      } else {
+        console.error('[LLM] Gemini error:', err.message);
+      }
     }
   }
+
 
   // Fallback to local heuristic string
   let n = `<strong>Analysis of ${slug}:</strong> `;
