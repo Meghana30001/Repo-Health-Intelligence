@@ -444,64 +444,22 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ═══════════════════════════════════════════════════════════════════
    10. BUS FACTOR VISUALIZATION
    ═══════════════════════════════════════════════════════════════════ */
-(function buildBusBars() {
+(function initBusBars() {
+  // Show placeholder until real WS data arrives
   const container = $('#busBars');
   if (!container) return;
-
-  const modules = [
-    { name: 'auth/', factor: 1, risk: true },
-    { name: 'kernels/', factor: 1, risk: true },
-    { name: 'graph.py', factor: 1, risk: true },
-    { name: 'core/', factor: 3, risk: false },
-    { name: 'python/', factor: 5, risk: false },
-    { name: 'ops/', factor: 4, risk: false },
-  ];
-
-  modules.forEach(m => {
-    const bar = document.createElement('div');
-    bar.style.cssText = `
-      display: flex; flex-direction: column; align-items: center;
-      gap: 6px; font-family: 'IBM Plex Mono', monospace;
-    `;
-
-    const val = document.createElement('div');
-    val.style.cssText = `
-      font-size: 0.75rem; font-weight: 600;
-      color: ${m.risk ? '#ef4444' : '#22c55e'};
-    `;
-    val.textContent = m.factor;
-
-    const rect = document.createElement('div');
-    const h = Math.max(m.factor * 14, 14);
-    rect.style.cssText = `
-      width: 28px; height: ${h}px; border-radius: 4px 4px 2px 2px;
-      background: ${m.risk ? 'rgba(239,68,68,0.4)' : 'rgba(34,197,94,0.3)'};
-      border: 1px solid ${m.risk ? '#ef4444' : '#22c55e'};
-      transition: height 1s ease;
-    `;
-
-    const label = document.createElement('div');
-    label.style.cssText = `font-size: 0.65rem; color: #444466; max-width: 32px; text-align: center; word-break: break-all;`;
-    label.textContent = m.name.replace('/', '');
-
-    bar.appendChild(val);
-    bar.appendChild(rect);
-    bar.appendChild(label);
-    container.appendChild(bar);
-  });
+  container.innerHTML = `<div style="color:var(--text-muted);font-family:var(--font-mono);font-size:.78rem;text-align:center;width:100%;padding:12px 0;">Run an analysis to see real bus factor data</div>`;
 })();
 
 /* ═══════════════════════════════════════════════════════════════════
-   11. ARCHITECTURAL DRIFT CHART (SVG sparkline)
+   11. ARCHITECTURAL DRIFT CHART (SVG sparkline — real-time)
    ═══════════════════════════════════════════════════════════════════ */
-(function buildDriftChart() {
+function renderDriftChart(values, labels) {
   const container = $('#driftChart');
   if (!container) return;
+  container.innerHTML = '';
 
-  const values = [34, 35, 34, 36, 37, 38, 37, 39, 40, 42, 43, 40];
-  const w = 240, h = 80;
-  const pad = 10;
-
+  const w = 240, h = 80, pad = 10;
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
   svg.setAttribute('width', '100%');
@@ -511,30 +469,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const minV = Math.min(...values) - 2;
   const pts = values.map((v, i) => {
     const x = pad + (i / (values.length - 1)) * (w - pad * 2);
-    const y = h - pad - ((v - minV) / (maxV - minV)) * (h - pad * 2);
+    const y = h - pad - ((v - minV) / (maxV - minV + 0.01)) * (h - pad * 2);
     return `${x},${y}`;
   });
 
-  // Area fill
+  // Colour: rising = red (bad), falling = green (improving)
+  const trend = values[values.length - 1] - values[0];
+  const lineColor = trend > 0 ? '#ef4444' : '#22c55e';
+  const fillColor = trend > 0 ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.10)';
+
   const area = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-  area.setAttribute('points',
-    `${pad},${h - pad} ${pts.join(' ')} ${w - pad},${h - pad}`
-  );
-  area.setAttribute('fill', 'rgba(239,68,68,0.12)');
+  area.setAttribute('points', `${pad},${h - pad} ${pts.join(' ')} ${w - pad},${h - pad}`);
+  area.setAttribute('fill', fillColor);
   svg.appendChild(area);
 
-  // Line
   const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
   polyline.setAttribute('points', pts.join(' '));
   polyline.setAttribute('fill', 'none');
-  polyline.setAttribute('stroke', '#ef4444');
+  polyline.setAttribute('stroke', lineColor);
   polyline.setAttribute('stroke-width', '2');
   polyline.setAttribute('stroke-linejoin', 'round');
   svg.appendChild(polyline);
 
-  // X-axis labels
-  ['Jun', '', '', 'Sep', '', '', 'Dec', '', '', 'Mar', '', 'May'].forEach((label, i) => {
-    if (!label) return;
+  // X-axis labels (every 4th month)
+  labels.forEach((label, i) => {
+    if (i % 4 !== 0 && i !== labels.length - 1) return;
     const x = pad + (i / (values.length - 1)) * (w - pad * 2);
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     text.setAttribute('x', x);
@@ -548,6 +507,28 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   container.appendChild(svg);
+
+  // Update coupling index metric text
+  const driftValEl = document.querySelector('.drift-val');
+  if (driftValEl) {
+    // Compare first quarter vs last quarter of complexity
+    const q = Math.max(1, Math.floor(values.length / 4));
+    const firstQ = values.slice(0, q).reduce((a, b) => a + b, 0) / q;
+    const lastQ  = values.slice(-q).reduce((a, b) => a + b, 0) / q;
+    const pct    = firstQ > 0 ? Math.round(((lastQ - firstQ) / firstQ) * 100) : 0;
+    const rising = pct >= 0;
+    driftValEl.textContent = `${rising ? '\u2191' : '\u2193'} ${Math.abs(pct)}% over ${labels.length} months`;
+    driftValEl.className   = `drift-val ${rising ? 'rising' : 'falling'}`;
+  }
+}
+
+// Initial placeholder render
+(function initDriftChart() {
+  const container = $('#driftChart');
+  if (!container) return;
+  container.innerHTML = `<div style="color:var(--text-muted);font-family:var(--font-mono);font-size:.75rem;text-align:center;padding:24px 0;">Run an analysis to see real drift data</div>`;
+  const driftValEl = document.querySelector('.drift-val');
+  if (driftValEl) { driftValEl.textContent = '— awaiting analysis'; driftValEl.className = 'drift-val'; }
 })();
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -646,6 +627,21 @@ function runAnalysis() {
   const llmBody = $('#llmBody');
   if (llmBody) llmBody.innerHTML = '<p class="llm-text" style="color:#444466;font-family:var(--font-mono);font-size:.85rem;">Analyzing<span class="cursor-blink"></span></p>';
 
+  // Reset bonus panels to loading state
+  const busBarsEl = $('#busBars');
+  if (busBarsEl) busBarsEl.innerHTML = `<div style="color:var(--text-muted);font-family:var(--font-mono);font-size:.78rem;text-align:center;width:100%;padding:12px 0;">Analyzing...</div>`;
+  const driftEl = $('#driftChart');
+  if (driftEl) driftEl.innerHTML = `<div style="color:var(--text-muted);font-family:var(--font-mono);font-size:.75rem;text-align:center;padding:24px 0;">Computing drift...</div>`;
+  const driftValEl = document.querySelector('.drift-val');
+  if (driftValEl) { driftValEl.textContent = '\u2014 computing...'; driftValEl.className = 'drift-val'; }
+  // Reset merge sim
+  const msScore = document.querySelector('.ms-score');
+  const msChange = document.querySelector('.ms-change');
+  const msLabel = document.querySelector('.ms-score-label');
+  if (msScore) msScore.textContent = '\u2014';
+  if (msChange) { msChange.textContent = ''; msChange.className = 'ms-change'; }
+  if (msLabel) msLabel.textContent = 'Enter PR to predict';
+
   const token = ($('#githubToken') || {}).value || '';
   const geminiKey = ($('#geminiToken') || {}).value || '';
   const depth = ($('#depthSelect') || {}).value || '200';
@@ -721,6 +717,9 @@ function onTimeline(ev) {
       },
     },
   });
+
+  // Drive architectural drift chart with real complexity trend data
+  renderDriftChart(ev.complexity, ev.labels);
 }
 
 function onTimelineEvents(ev) {
