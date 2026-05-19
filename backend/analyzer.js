@@ -39,12 +39,12 @@ async function setCache(slug, result) {
     try {
       await Analysis.findOneAndUpdate(
         { slug },
-        { ...result, slug, analyzedAt: new Date() },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
+        { $set: { ...result, slug, analyzedAt: new Date() } },
+        { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
       );
-      console.log(`[Cache] Saved to MongoDB: ${slug}`);
+      console.log(`[MongoDB] Saved analysis: ${slug}`);
     } catch (err) {
-      console.warn('[Cache] MongoDB write error:', err.message);
+      console.warn('[MongoDB] Write error:', err.message);
     }
   }
   // Always keep in-memory copy too for speed
@@ -194,7 +194,7 @@ async function analyzeRepo(repoInput, emit, options = {}) {
     emit({ type: 'narrative', text: narrative });
 
     emit({ type: 'progress', stage: 'done', message: `✓ Analysis complete!`, pct: 100 });
-    const result = { slug, commitCount: commits.length, hotspots, busFactor, timeline, graph, score, narrative, repoMeta, testInfo, deps };
+    const result = { slug, commitCount: commits.length, depth, hotspots, busFactor, timeline, graph, score, narrative, repoMeta, testInfo, deps };
     await setCache(slug, result);
     // Also store unique authors count for frontend use
     const uniqueAuthors = new Set(commits.map(c => c.author).filter(Boolean)).size;
