@@ -640,8 +640,9 @@ function runAnalysis() {
   if (llmBody) llmBody.innerHTML = '<p class="llm-text" style="color:#444466;font-family:var(--font-mono);font-size:.85rem;">Analyzing<span class="cursor-blink"></span></p>';
 
   const token = ($('#githubToken') || {}).value || '';
+  const geminiKey = ($('#geminiToken') || {}).value || '';
   const depth = ($('#depthSelect') || {}).value || '200';
-  ws.send(JSON.stringify({ type: 'analyze', repo, token, depth: parseInt(depth) }));
+  ws.send(JSON.stringify({ type: 'analyze', repo, token, geminiKey, depth: parseInt(depth) }));
 }
 
 /* ── WS event handlers ── */

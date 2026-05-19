@@ -295,11 +295,15 @@
         <span id="analyzeBtnText">Analyze Repository</span>
       </button>
     </div>
-    <!-- Token row -->
     <div class="token-row">
       <span class="token-label">🔑 GitHub Token</span>
       <input type="password" id="githubToken" placeholder="ghp_... (optional — for private repos &amp; faster API)" class="token-input"/>
       <span class="token-hint">Private repos need a token with <code>repo</code> scope</span>
+    </div>
+    <div class="token-row" style="margin-top: 8px;">
+      <span class="token-label">✨ Gemini API Key</span>
+      <input type="password" id="geminiToken" placeholder="AI Studio Key (optional — for LLM narrative)" class="token-input"/>
+      <span class="token-hint">Used for Gemini 1.5 Flash AI analysis</span>
     </div>
 
     <!-- Dashboard Tabs -->

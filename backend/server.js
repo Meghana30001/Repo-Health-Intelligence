@@ -59,6 +59,7 @@ wss.on('connection', (ws, req) => {
       if (!repo) { ws.send(JSON.stringify({ type: 'error', message: 'No repo specified.' })); return; }
 
       const token = (msg.token || '').trim();
+      const geminiKey = (msg.geminiKey || '').trim();
       const depth = Math.min(Math.max(parseInt(msg.depth) || 200, 50), 1000);
 
       console.log(`[Analysis] Starting: ${repo} (depth=${depth}, auth=${!!token})`);
@@ -67,7 +68,7 @@ wss.on('connection', (ws, req) => {
       function emit(event) { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(event)); }
 
       try {
-        await analyzeRepo(repo, emit, { token, depth });
+        await analyzeRepo(repo, emit, { token, depth, geminiKey });
       } catch (err) {
         console.error('[Analysis] Uncaught error:', err.message);
         emit({ type: 'error', message: `Unexpected error: ${err.message.substring(0, 150)}` });
